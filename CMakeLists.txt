@@ -10,6 +10,8 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
 )
 
+find_package(Eigen3 REQUIRED)
+
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -112,11 +114,6 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 # include_directories(include)
-include_directories(
-  ${catkin_INCLUDE_DIRS}
-  ./include
-)
-
 ## Declare a C++ library
 # add_library(tk_arm
 #   src/${PROJECT_NAME}/tk_arm.cpp
@@ -189,8 +186,9 @@ include_directories(
 # catkin_add_nosetests(test)
 
 include_directories(
-    include 
+    ./include 
     ${catkin_INCLUDE_DIRS}
+    ${EIGEN3_INCLUDE_DIR}
     /usr/local/include
 )
 
