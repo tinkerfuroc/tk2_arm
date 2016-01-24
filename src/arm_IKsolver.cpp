@@ -1,5 +1,5 @@
 #include "ros/ros.h"
-#include "tk_arm/outpos.h"
+#include "tk_arm/OutPos.h"
 #include <kdl/frames_io.hpp>
 #include <kdl/chainfksolverpos_recursive.hpp>
 #include <kdl/chainiksolverpos_lma.hpp>
@@ -26,7 +26,6 @@
 #define SEG3_MAX	3.1/180.0*M_PI
 #define SEG3_INIT	-30/180.0*M_PI
 
-
 using namespace KDL;
 
 int main(int argc, char **argv)
@@ -50,7 +49,7 @@ int main(int argc, char **argv)
 	
 	ros::init(argc, argv, "outpos");
 	ros::NodeHandle nodehandle;
-	ros::Publisher chatter_pub = nodehandle.advertise<tk_arm::outpos>("chatter", 1000);
+	ros::Publisher position_pub = nodehandle.advertise<tk_arm::OutPos>("arm_pos", 0);
 	ros::Rate loop_rate(10);
 
 	int count = 0;
@@ -60,63 +59,61 @@ int main(int argc, char **argv)
 	q_init(2)=SEG2_INIT*M_PI/180;
 	q_init(3)=SEG3_INIT*M_PI/180;
 
-	while (ros::ok())
-	{
-
-		for(unsigned int i = 0; i < n; i++){
-			double myinput;
-			printf ("pos of joint %i: ",i+1);
-			scanf ("%lf",&myinput);
-			if (myinput == 999.0) exit(0);
-			q(i)=myinput*M_PI/180;
-		}
-		
-		fksolver.JntToCart(q,pos_goal);
-
-		int retval;
-		retval = solver.CartToJnt(q_init,pos_goal,q_sol);
-
-		while (!(retval == 0 
-			&& q_sol(0) < SEG0_MAX && q_sol(0) > SEG0_MIN
-			&& q_sol(1) < SEG1_MAX && q_sol(1) > SEG1_MIN
-			&& q_sol(2) < SEG2_MAX && q_sol(2) > SEG2_MIN
-			&& q_sol(3) < SEG3_MAX && q_sol(3) > SEG3_MIN) && errcount < 50) {
-		
-			ROS_INFO("Error Code %d. POS: %lf %lf %lf %lf. Recalculating...\n", retval, q_sol(0)/M_PI*180.0, \
-				q_sol(1)/M_PI*180.0, q_sol(2)/M_PI*180.0, q_sol(3)/M_PI*180.0);
-
-			q_init.data.setRandom();
-			q_init.data *= M_PI;
-			retval = solver.CartToJnt(q_init,pos_goal,q_sol);
-			errcount++;
-		}
-
-		if (errcount == 500) {
-			ROS_INFO("Max Iteration Reached. No Solution.\n");
-		}
-		else {	
-			q_init = q_sol;
-			
-			tk_arm::outpos msg;
-
-			msg.pos1 = q_sol(0);
-			msg.pos2 = q_sol(1);
-			msg.pos3 = q_sol(2);
-			msg.pos4 = q_sol(3);
-			msg.pos5 = 0;
-			msg.pos6 = 0;
-
-			ROS_INFO("OUTPOS:%lf %lf %lf %lf %lf %lf\n", msg.pos1/M_PI*180.0, msg.pos2/M_PI*180.0, \
-				msg.pos3/M_PI*180.0, msg.pos4/M_PI*180.0, msg.pos5/M_PI*180.0, msg.pos6/M_PI*180.0);
-			chatter_pub.publish(msg);
-
-			ros::spinOnce();
-
-			loop_rate.sleep();
-			++count;
-		}
-		errcount = 0;
+	for(unsigned int i = 0; i < n; i++){
+		double myinput;
+		printf ("pos of joint %i: ",i+1);
+		scanf ("%lf",&myinput);
+		if (myinput == 999.0) exit(0);
+		q(i)=myinput*M_PI/180;
 	}
+	
+	fksolver.JntToCart(q,pos_goal);
+
+	int retval;
+	retval = solver.CartToJnt(q_init,pos_goal,q_sol);
+
+	while (!(retval == 0 
+		&& q_sol(0) < SEG0_MAX && q_sol(0) > SEG0_MIN
+		&& q_sol(1) < SEG1_MAX && q_sol(1) > SEG1_MIN
+		&& q_sol(2) < SEG2_MAX && q_sol(2) > SEG2_MIN
+		&& q_sol(3) < SEG3_MAX && q_sol(3) > SEG3_MIN) && errcount < 50) {
+	
+		ROS_INFO("Error Code %d. POS: %lf %lf %lf %lf. Recalculating...\n", retval, q_sol(0)/M_PI*180.0, \
+			q_sol(1)/M_PI*180.0, q_sol(2)/M_PI*180.0, q_sol(3)/M_PI*180.0);
+
+		q_init.data.setRandom();
+		q_init.data *= M_PI;
+		retval = solver.CartToJnt(q_init,pos_goal,q_sol);
+		errcount++;
+	}
+
+	if (errcount == 500) {
+		ROS_INFO("Max Iteration Reached. No Solution.\n");
+	}
+	else {	
+		q_init = q_sol;
+		
+		tk_arm::OutPos msg;
+
+		msg.pos1 = q_sol(0);
+		msg.pos2 = q_sol(1);
+		msg.pos3 = q_sol(2);
+		msg.pos4 = q_sol(3);
+		msg.pos5 = 0;
+		msg.pos6 = 0;
+
+		position_pub.publish(msg);
+		ROS_INFO("OUTPOS:%lf %lf %lf %lf %lf %lf\n", msg.pos1/M_PI*180.0, msg.pos2/M_PI*180.0, \
+			msg.pos3/M_PI*180.0, msg.pos4/M_PI*180.0, msg.pos5/M_PI*180.0, msg.pos6/M_PI*180.0);
+		ros::spinOnce();
+
+		while(ros::ok())
+		{
+		    position_pub.publish(msg);
+		    loop_rate.sleep();
+		}
+	}
+	errcount = 0;
 
 	return 0;
 }
