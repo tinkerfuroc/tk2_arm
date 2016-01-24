@@ -9,24 +9,25 @@
 
 #define LENGTH_FAC	9
 #define ANG_FAC	5
+#define ERR_ITER 50
 
-#define SEG0_MIN	-60.1/180.0*M_PI
-#define SEG0_MAX	60.1/180.0*M_PI
-#define SEG0_INIT	0/180.0*M_PI
-
-#define SEG1_MIN	27.1/180.0*M_PI
-#define SEG1_MAX	98.1/180.0*M_PI
-#define SEG1_INIT	67/180.0*M_PI
-
-#define SEG2_MIN	25.1/180.0*M_PI
-#define SEG2_MAX	113.1/180.0*M_PI
-#define SEG2_INIT	70/180.0*M_PI
-
-#define SEG3_MIN	-77.1/180.0*M_PI
-#define SEG3_MAX	3.1/180.0*M_PI
-#define SEG3_INIT	-30/180.0*M_PI
+double SEG_MIN[]	=	{-60.1/180.0*M_PI,27.1/180.0*M_PI,25.1/180.0*M_PI,-77.1/180.0*M_PI};	//max angle pos
+double SEG_MAX[]	=	{60.1/180.0*M_PI,98.1/180.0*M_PI,113.1/180.0*M_PI,3.1/180.0*M_PI};	//min angle pos
+double SEG_INIT[]	=	{0/180.0*M_PI,67/180.0*M_PI,70/180.0*M_PI,-30/180.0*M_PI};	//init angle pos
 
 using namespace KDL;
+
+bool isAngleOutOfRange(const JntArray q) {
+	bool isOut = false;
+	for (int i = 0; i < 4; ++i) {
+		if (q(i) > SEG_MAX[i] || q(i) < SEG_MIN[i])
+			isOut = true;
+	}
+	if (isOut) {		
+		ROS_INFO("Solution out of range.\n");
+	}
+	return isOut;
+}
 
 int main(int argc, char **argv)
 {
@@ -54,17 +55,28 @@ int main(int argc, char **argv)
 
 	int count = 0;
 	int errcount = 0;
-	q_init(0)=SEG0_INIT*M_PI/180;
-	q_init(1)=SEG1_INIT*M_PI/180;
-	q_init(2)=SEG2_INIT*M_PI/180;
-	q_init(3)=SEG3_INIT*M_PI/180;
+	for (int i = 0; i < n; ++i)
+	{
+		q_init(i) = SEG_INIT[i]*M_PI/180;
+	}
 
+	// angle input
 	for(unsigned int i = 0; i < n; i++){
 		double myinput;
-		printf ("pos of joint %i: ",i+1);
-		scanf ("%lf",&myinput);
-		if (myinput == 999.0) exit(0);
-		q(i)=myinput*M_PI/180;
+		printf ("pos of joint %i: ",i);
+		scanf ("%lf",&myinput);		
+		if (myinput == 999.0) {
+			exit(0);
+		}
+		else{
+			myinput = myinput*M_PI/180;
+			if (myinput> SEG_MAX[i] || myinput < SEG_MIN[i]) {
+				ROS_INFO("Input angle out of range. %lf not between %lf and %lf.\n", \
+					myinput/M_PI*180, SEG_MIN[i]/M_PI*180, SEG_MAX[i]/M_PI*180);
+				exit(0);
+			}
+			q(i) = myinput;
+		}
 	}
 	
 	fksolver.JntToCart(q,pos_goal);
@@ -72,23 +84,19 @@ int main(int argc, char **argv)
 	int retval;
 	retval = solver.CartToJnt(q_init,pos_goal,q_sol);
 
-	while (!(retval == 0 
-		&& q_sol(0) < SEG0_MAX && q_sol(0) > SEG0_MIN
-		&& q_sol(1) < SEG1_MAX && q_sol(1) > SEG1_MIN
-		&& q_sol(2) < SEG2_MAX && q_sol(2) > SEG2_MIN
-		&& q_sol(3) < SEG3_MAX && q_sol(3) > SEG3_MIN) && errcount < 50) {
-	
+	// evaluating IKsolver
+	while ((retval != 0 || isAngleOutOfRange(q_sol)) && errcount < ERR_ITER) {	
 		ROS_INFO("Error Code %d. POS: %lf %lf %lf %lf. Recalculating...\n", retval, q_sol(0)/M_PI*180.0, \
 			q_sol(1)/M_PI*180.0, q_sol(2)/M_PI*180.0, q_sol(3)/M_PI*180.0);
-
 		q_init.data.setRandom();
 		q_init.data *= M_PI;
 		retval = solver.CartToJnt(q_init,pos_goal,q_sol);
 		errcount++;
 	}
 
-	if (errcount == 500) {
+	if (errcount == ERR_ITER) {
 		ROS_INFO("Max Iteration Reached. No Solution.\n");
+		exit(0);
 	}
 	else {	
 		q_init = q_sol;
@@ -107,6 +115,7 @@ int main(int argc, char **argv)
 			msg.pos3/M_PI*180.0, msg.pos4/M_PI*180.0, msg.pos5/M_PI*180.0, msg.pos6/M_PI*180.0);
 		ros::spinOnce();
 
+		//send message
 		while(ros::ok())
 		{
 		    position_pub.publish(msg);
