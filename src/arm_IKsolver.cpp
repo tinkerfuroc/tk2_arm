@@ -5,27 +5,44 @@
 #include <kdl/chainiksolverpos_lma.hpp>
 #include <cstdio>
 #include <iostream>
-#include <sstream>
+// #include <sstream>
 
-#define LENGTH_FAC	10
-#define ANG_FAC	5
-#define ERR_ITER 50
-#define INTPOL 1.0/180.0*M_PI
+#define LENGTH_FAC	(10)
+#define ANG_FAC	(0)
+#define RATE (10)
+#define ERR_ITER (10)
+#define INTPOL (1.0/180.0*M_PI)
 
-double SEG_MIN[]	=	{-77.1/180.0*M_PI,26.9/180.0*M_PI,24.9/180.0*M_PI,-77.1/180.0*M_PI};	//max angle pos
-double SEG_MAX[]	=	{44.1/180.0*M_PI,98.1/180.0*M_PI,113.1/180.0*M_PI,3.1/180.0*M_PI};	//min angle pos
-double SEG_INIT[]	=	{0/180.0*M_PI,67/180.0*M_PI,70/180.0*M_PI,-30/180.0*M_PI};	//init angle pos
+double SEG_MIN[]  = {-77.1	/180.0*M_PI,
+					 26.9	/180.0*M_PI,
+					 24.9	/180.0*M_PI,
+					 -77.1	/180.0*M_PI};	//min angle pos
+
+double SEG_MAX[]  = {44.1	/180.0*M_PI,
+					 98.1	/180.0*M_PI,
+					 113.1	/180.0*M_PI,
+					 3.1	/180.0*M_PI};	//max angle pos
+
+double SEG_INIT[] = {0		/180.0*M_PI,
+					 67		/180.0*M_PI,
+					 70		/180.0*M_PI,
+					 -30	/180.0*M_PI};	//init angle pos
 
 using namespace KDL;
 
 bool isAngleOutOfRange(const JntArray q) {
 	bool isOut = false;
-	for (int i = 0; i < 4; ++i) {
-		if (q(i) > SEG_MAX[i] || q(i) < SEG_MIN[i])
+	int label[3]={0};
+	for (int i = 0; i < 3; ++i) {
+		if (q(i) > SEG_MAX[i] || q(i) < SEG_MIN[i]) {
 			isOut = true;
+			label[i] = 1;
+		}
 	}
-	if (isOut) {		
-		ROS_INFO("Solution out of range.\n");
+	if (isOut) {
+		ROS_INFO("Solution out of range. %d%d%d. POS: %lf %lf %lf. Recalculating...\n", \
+			label[0], label[1], label[2], \
+			q(0)/M_PI*180.0, q(1)/M_PI*180.0, q(2)/M_PI*180.0);
 	}
 	return isOut;
 }
@@ -33,11 +50,9 @@ bool isAngleOutOfRange(const JntArray q) {
 int main(int argc, char **argv)
 {
 	Chain chain;
-	chain.addSegment(Segment(Joint(Joint::RotZ),Frame(Vector(0.0,0.0,0.01*LENGTH_FAC))));	//
-	chain.addSegment(Segment(Joint(Joint::RotX),Frame(Vector(0.0,0.0,0.35*LENGTH_FAC))));	// 27 degree to 98 degree
-	chain.addSegment(Segment(Joint(Joint::RotX),Frame(Vector(0.0,0.0,0.28*LENGTH_FAC))));	// 25 degree to 113 degree
-	// chain.addSegment(Segment(Joint(Joint::RotX),Frame(Vector(0.0,0.0,0.10*LENGTH_FAC))));	// -77 degree to 3 degree
-	// chain.addSegment(Segment(Joint(Joint::RotZ),Frame(Vector(0.0,0.0,0.0))));
+	chain.addSegment(Segment(Joint(Joint::RotZ),Frame(Vector(0.0,0.0,0.01*LENGTH_FAC))));	//	-77 degree to 44 degree
+	chain.addSegment(Segment(Joint(Joint::RotY),Frame(Vector(0.0,0.0,0.35*LENGTH_FAC))));	// 27 degree to 98 degree
+	chain.addSegment(Segment(Joint(Joint::RotY),Frame(Vector(0.0,0.0,0.28*LENGTH_FAC))));	// 25 degree to 113 degree
 	
 	int n = chain.getNrOfJoints();
 	Eigen::Matrix<double,6,1> L;
@@ -52,7 +67,7 @@ int main(int argc, char **argv)
 	ros::init(argc, argv, "outpos");
 	ros::NodeHandle nodehandle;
 	ros::Publisher position_pub = nodehandle.advertise<tk_arm::OutPos>("arm_pos", 0);
-	ros::Rate loop_rate(10);
+	ros::Rate loop_rate(RATE);
 	tk_arm::OutPos msg;
 
 	int count = 0;
@@ -75,46 +90,45 @@ int main(int argc, char **argv)
 	ros::spinOnce();
 
 	//send init message
-	for (int i = 0; i < 10; ++i)
+	for (int i = 0; i < 5; ++i)
 	{
 		position_pub.publish(msg);
 		loop_rate.sleep();
 	}
+	
+	//print init position
+	fksolver.JntToCart(q_init,pos_goal);
+	std::cout << "Current Pos: " << pos_goal.p / LENGTH_FAC << std::endl;
 
-	// for (int i = 0; i < 1; ++i)
-	// {
-		// angle input
-		for(unsigned int i = 0; i < n; i++){
-			double myinput;
-			printf ("pos of joint %i: ",i);
-			scanf ("%lf",&myinput);
-			myinput = myinput*M_PI/180;
-			if (myinput> SEG_MAX[i] || myinput < SEG_MIN[i]) {
-				ROS_INFO("Input angle out of range. %lf not between %lf and %lf.\n", \
-					myinput/M_PI*180, SEG_MIN[i]/M_PI*180, SEG_MAX[i]/M_PI*180);
-				exit(0);
-			}
-			q(i) = myinput;
+	while(ros::ok())
+	{		
+		// pos input
+		Vector pos_vec;
+		for (int i = 0; i < 3 && ros::ok(); ++i)
+		{
+			double posinput;
+			printf("POS %d: ", i);
+			scanf("%lf", &posinput);
+			pos_vec(i) = posinput * LENGTH_FAC;
 		}
+		pos_goal.p = pos_vec;
 
-		//if end effector rotation limit breached, quit
-		double q3 = M_PI/2 - q(1) - q(2);
-		if (q3 > SEG_MAX[3] || q3 < SEG_MIN[3]) {
-			ROS_INFO("Calculated angle out of range. %lf not between %lf and %lf.\n", \
-				q3/M_PI*180, SEG_MIN[3]/M_PI*180, SEG_MAX[3]/M_PI*180);
-			exit(0);			
-		}
-		
-		fksolver.JntToCart(q,pos_goal);
-
+		//solve IK
 		int retval;
 		retval = solver.CartToJnt(q_init,pos_goal,q_sol);
 		double q_sol3 = M_PI/2 - q_sol(1) - q_sol(2);
 
 		// evaluating IKsolver
-		while ((retval != 0 || isAngleOutOfRange(q_sol) || q_sol3 > SEG_MAX[3] || q_sol3 < SEG_MIN[3]) && errcount < ERR_ITER) {	
-			ROS_INFO("Error Code %d. POS: %lf %lf %lf %lf. Recalculating...\n", retval, q_sol(0)/M_PI*180.0, \
-				q_sol(1)/M_PI*180.0, q_sol(2)/M_PI*180.0, q_sol(3)/M_PI*180.0);
+		while ((retval != 0 || isAngleOutOfRange(q_sol) || q_sol3 > SEG_MAX[3] || q_sol3 < SEG_MIN[3]) \
+			&& errcount < ERR_ITER) {
+			if (retval != 0) {
+				ROS_INFO("Error Code %d. POS: %lf %lf %lf. Recalculating...\n", \
+					retval, q_sol(0)/M_PI*180.0, \
+					q_sol(1)/M_PI*180.0, q_sol(2)/M_PI*180.0);
+			}
+			else if (q_sol3 > SEG_MAX[3] || q_sol3 < SEG_MIN[3]) {
+				ROS_INFO("End rotation angle out of range. Recalculating...\n");				
+			}
 			q_init2.data.setRandom();
 			q_init2.data *= M_PI;
 			retval = solver.CartToJnt(q_init2,pos_goal,q_sol);
@@ -123,7 +137,9 @@ int main(int argc, char **argv)
 
 		if (errcount == ERR_ITER) {
 			ROS_INFO("Max Iteration Reached. No Solution.\n");
-			exit(0);
+			//print current pos
+			fksolver.JntToCart(q_init,pos_goal);
+			std::cout << "Current Pos: " << pos_goal.p / LENGTH_FAC << std::endl;
 		}
 		else {	
 			double maxdegree = 0.0;
@@ -165,16 +181,17 @@ int main(int argc, char **argv)
 				msg.pos3/M_PI*180.0, msg.pos4/M_PI*180.0, msg.pos5/M_PI*180.0, msg.pos6/M_PI*180.0);
 			ros::spinOnce();
 
-			while(ros::ok())
-			{
-				position_pub.publish(msg);
-				loop_rate.sleep();
-			}
+			position_pub.publish(msg);
+			loop_rate.sleep();
 
+			//print current pos
+			fksolver.JntToCart(q_sol,pos_goal);
+			std::cout << "Current Pos: " << pos_goal.p / LENGTH_FAC << std::endl;
+						
 			q_init = q_sol;	
 		}
-	// }
-	errcount = 0;
+		errcount = 0;
+	}
 
 	return 0;
 }
