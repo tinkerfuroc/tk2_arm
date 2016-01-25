@@ -19,7 +19,7 @@ static const double FORWARD_VELO = 0.02;
 static const double SLEEP_TIME = 0.1;
 static const double CATCH_SLEEP_TIME = 0.5;
 static const double BLIND_DIST = 0.1;
-static const double LIFT_HEIGHT = 0.05;
+static const double LIFT_HEIGHT = 0.1 * LENGTH_FAC;
 
 static const double SEG_MIN[] =
 {
@@ -295,26 +295,33 @@ int main(int argc, char **argv)
 	msg_publish(q_init, 1, position_pub, loop_rate, 1);
 	ros::Duration(CATCH_SLEEP_TIME).sleep();
 
-	//go back to init
 	print_pos(chain, q_catch, pos_goal);
-	pos_goal.p(2) += LIFT_HEIGHT;
 
 	int retval;
 	retval = solver.CartToJnt(q_catch, pos_goal, q_sol);
 	solver_judge(chain, L, retval, q_catch, q_sol, pos_goal, position_pub, loop_rate, false);
 	q_init = q_sol;
 
-	pos_goal.p(0) = 0.4;
-	pos_goal.p(1) = 0.0;
-	pos_goal.p(2) = 0.05;
+	pos_goal.p(0) = 0.4 * LENGTH_FAC;
+	pos_goal.p(1) = 0.0 * LENGTH_FAC;
+	pos_goal.p(2) = 0.05 * LENGTH_FAC;
 
 	retval = solver.CartToJnt(q_init, pos_goal, q_sol);
 	solver_judge(chain, L, retval, q_init, q_sol, pos_goal, position_pub, loop_rate, false);
 	q_init = q_sol;
 
-	pos_goal.p(0) = 0.6;
-	pos_goal.p(1) = 0.0;
-	pos_goal.p(2) = -0.1;
+	pos_goal.p(0) = 0.4 * LENGTH_FAC;
+	pos_goal.p(1) = 0.0 * LENGTH_FAC;
+	pos_goal.p(2) = -0.1 * LENGTH_FAC;
+
+	retval = solver.CartToJnt(q_init, pos_goal, q_sol);
+	solver_judge(chain, L, retval, q_init, q_sol, pos_goal, position_pub, loop_rate, false);
+	q_init = q_sol;
+
+
+	pos_goal.p(0) = 0.6 * LENGTH_FAC;
+	pos_goal.p(1) = 0.0 * LENGTH_FAC;
+	pos_goal.p(2) = -0.1 * LENGTH_FAC;
 
 	retval = solver.CartToJnt(q_init, pos_goal, q_sol);
 	solver_judge(chain, L, retval, q_init, q_sol, pos_goal, position_pub, loop_rate, false);
