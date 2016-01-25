@@ -127,6 +127,8 @@ bool ArmController::CalculateJointAngle(const geometry_msgs::Point &target, KDL:
             joint_angle = new_joint_angles;
             return true;
         }
+        seed_joint_angles.data.setRandom();
+        seed_joint_angles.data *= M_PI;
     }
     ROS_ERROR("failed to calculate joint angle");
     ROS_ERROR("now position %lf, %lf, %lf", now_end_point_.x, now_end_point_.y, now_end_point_.z);

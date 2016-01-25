@@ -17,6 +17,8 @@ public:
     { }
 
     virtual bool TimeCallback();
+
+    virtual ~BaseArmController() { }
 protected:
     virtual bool NeedStart() = 0;
     virtual bool GetNewTarget(geometry_msgs::Point &new_target) = 0;
