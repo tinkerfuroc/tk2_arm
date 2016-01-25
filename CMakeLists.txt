@@ -194,11 +194,15 @@ include_directories(
 )
 
 
-add_executable(IKsolver src/arm_IKsolver.cpp)
 link_directories(/usr/local/lib)
+add_executable(IKsolver src/arm_IKsolver.cpp)
 target_link_libraries(IKsolver ${catkin_LIBRARIES} orocos-kdl)
 add_dependencies(IKsolver tk_arm_generate_messages_cpp)
 
+
+add_executable(set_arm src/set_arm.cpp)
+target_link_libraries(set_arm ${catkin_LIBRARIES} orocos-kdl)
+add_dependencies(set_arm tk_arm_generate_messages_cpp)
 # add_executable(IKreceiver src/arm_IKreceiver.cpp)
 # target_link_libraries(IKsolver ${catkin_LIBRARIES})
 # add_dependencies(IKreceiver tk_arm_generate_messages_cpp)
