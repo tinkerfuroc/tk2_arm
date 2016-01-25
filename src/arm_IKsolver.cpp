@@ -17,7 +17,7 @@ static const double IMAGE_HEIGHT = 480.0;
 static const double DPOS_FAC = 0.0001 * LENGTH_FAC;
 static const double FORWARD_VELO = 0.02;
 static const double SLEEP_TIME = 0.1;
-static const double CATCH_SLEEP_TIME = 0.3;
+static const double CATCH_SLEEP_TIME = 0.5;
 static const double BLIND_DIST = 0.1;
 
 static const double SEG_MIN[] =
@@ -139,7 +139,7 @@ void arm_init(const Chain chain, JntArray &q_init)
 }
 
 int solver_judge(const Chain chain, const Eigen::Matrix<double, 6, 1> L, const int retval, JntArray &q_init, \
-                 JntArray &q_sol, Frame &final_pos, ros::Publisher pub, ros::Rate rate)
+                 JntArray &q_sol, Frame &final_pos, ros::Publisher pub, ros::Rate rate, bool isopen)
 {
     int errcount = 0, val = retval, return_val = -1;
     int n = chain.getNrOfJoints();
@@ -202,7 +202,7 @@ int solver_judge(const Chain chain, const Eigen::Matrix<double, 6, 1> L, const i
             msg.pos3 = (q_sol(2) * i + q_init(2) * (intpolnum - i)) / intpolnum;
             msg.pos4 = M_PI / 2 - msg.pos2 - msg.pos3;
             msg.pos5 = 0;
-            msg.pos6 = 0;
+            msg.pos6 = isopen ? 0 : 1;
 
             ROS_INFO("OUTPOS: %6.3lf %6.3lf %6.3lf %6.3lf %6.3lf %6.3lf", msg.pos1 / M_PI * 180.0, msg.pos2 / M_PI * 180.0, \
                      msg.pos3 / M_PI * 180.0, msg.pos4 / M_PI * 180.0, msg.pos5 / M_PI * 180.0, msg.pos6 / M_PI * 180.0);
@@ -213,7 +213,7 @@ int solver_judge(const Chain chain, const Eigen::Matrix<double, 6, 1> L, const i
         }
 
         //final publish
-        msg_publish(q_sol, 1, pub, rate, 0);
+        msg_publish(q_sol, 1, pub, rate, !isopen);
 
         //print current pos
         print_pos(chain, q_sol, final_pos);
@@ -281,7 +281,7 @@ int main(int argc, char **argv)
         retval = solver.CartToJnt(q_init, pos_goal_corrected, q_sol);
 
         //check if solution is valid
-        solver_judge(chain, L, retval, q_init, q_sol, pos_goal_corrected, position_pub, loop_rate);
+        solver_judge(chain, L, retval, q_init, q_sol, pos_goal_corrected, position_pub, loop_rate,  true);
         pos_goal = pos_goal_corrected;
         ros::spinOnce();
         ros::Duration(SLEEP_TIME).sleep();
@@ -300,7 +300,7 @@ int main(int argc, char **argv)
 
     int retval;
     retval = solver.CartToJnt(q_catch, pos_goal, q_init);
-    solver_judge(chain, L, retval, q_catch, q_init, pos_goal, position_pub, loop_rate);
+    solver_judge(chain, L, retval, q_catch, q_init, pos_goal, position_pub, loop_rate, false);
 
     return 0;
 }
