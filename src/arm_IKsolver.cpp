@@ -16,7 +16,8 @@ static const double IMAGE_WIDTH = 640.0;
 static const double IMAGE_HEIGHT = 480.0;
 static const double DPOS_FAC = 0.0001 * LENGTH_FAC;
 static const double FORWARD_VELO = 0.02;
-static const double SLEEP_TIME = 0.3;
+static const double SLEEP_TIME = 0.1;
+static const double CATCH_SLEEP_TIME = 0.3;
 static const double BLIND_DIST = 0.1;
 
 static const double SEG_MIN[] =
@@ -76,25 +77,10 @@ void update_dpos(const tk_arm::TargetFound& msg)
         dpos_new.p(1) = (IMAGE_WIDTH / 2 - center_left) * DPOS_FAC;
         dpos_new.p(2) = (IMAGE_HEIGHT / 2 - center_top) * DPOS_FAC;
         ROS_INFO("Camera info acquired. Correction: %6.3lf %6.3lf.", dpos_new.p(1), dpos_new.p(2));
-        //while(ros::ok());
     }
 }
 
-// void update_dpos()
-// {
-//     double x, y;
-//     printf("Move Vector X: ");
-//     scanf("%lf", &x);
-//     printf("Move Vector Y: ");
-//     scanf("%lf", &y);
-//     updatingpos = true;
-//     dpos_new.p(1) = (IMAGE_WIDTH / 2 - x) * DPOS_FAC;
-//     dpos_new.p(2) = (IMAGE_HEIGHT / 2 - y) * DPOS_FAC;
-//     updatingpos = false;
-
-// }
-
-void msg_publish(const JntArray q, const int times, ros::Publisher pub, ros::Rate rate)
+void msg_publish(const JntArray q, const int times, ros::Publisher pub, ros::Rate rate, bool clawcatch)
 {
     tk_arm::OutPos msg;
 
@@ -103,7 +89,7 @@ void msg_publish(const JntArray q, const int times, ros::Publisher pub, ros::Rat
     msg.pos3 = q(2);
     msg.pos4 = M_PI / 2 - msg.pos2 - msg.pos3;
     msg.pos5 = 0;
-    msg.pos6 = 0;
+    msg.pos6 = clawcatch ? 1 : 0;
 
     ROS_INFO("OUTPOS:%6.3lf %6.3lf %6.3lf %6.3lf %6.3lf %6.3lf", msg.pos1 / M_PI * 180.0, msg.pos2 / M_PI * 180.0, \
              msg.pos3 / M_PI * 180.0, msg.pos4 / M_PI * 180.0, msg.pos5 / M_PI * 180.0, msg.pos6 / M_PI * 180.0);
@@ -227,7 +213,7 @@ int solver_judge(const Chain chain, const Eigen::Matrix<double, 6, 1> L, const i
         }
 
         //final publish
-        msg_publish(q_sol, 1, pub, rate);
+        msg_publish(q_sol, 1, pub, rate, 0);
 
         //print current pos
         print_pos(chain, q_sol, final_pos);
@@ -256,11 +242,11 @@ int main(int argc, char **argv)
     L(0) = L(1) = L(2) = 1;
     L(3) = L(4) = L(5) = ANG_FAC;
     ChainIkSolverPos_LMA solver(chain, L);
-    JntArray q_init(n), q_sol(n);
+    JntArray q_init(n), q_sol(n), q_catch(n);
     Frame pos_goal, pos_goal_corrected;
 
     arm_init(chain, q_init);
-    msg_publish(q_init, 5, position_pub, loop_rate);
+    msg_publish(q_init, 5, position_pub, loop_rate, 0);
     print_pos(chain, q_init, pos_goal);
 
     dpos_new.p.x(0);
@@ -285,11 +271,7 @@ int main(int argc, char **argv)
         }
         else {
             break;
-            pos_goal_corrected.p = pos_goal.p;
         }
-
-        // update_dpos();
-
 
         ROS_INFO("Coord after correction: [%6.3lf, %6.3lf, %6.3lf].", pos_goal_corrected.p(0) / LENGTH_FAC, \
                  pos_goal_corrected.p(1) / LENGTH_FAC, pos_goal_corrected.p(2) / LENGTH_FAC);
@@ -304,6 +286,21 @@ int main(int argc, char **argv)
         ros::spinOnce();
         ros::Duration(SLEEP_TIME).sleep();
     }
+
+    q_catch = q_sol;
+
+    //catch
+    ros::Duration(CATCH_SLEEP_TIME).sleep();
+    msg_publish(q_init, 1, position_pub, loop_rate, 1);
+    ros::Duration(CATCH_SLEEP_TIME).sleep();
+
+    //go back to init
+    arm_init(chain, q_init);
+    print_pos(chain, q_init, pos_goal);
+
+    int retval;
+    retval = solver.CartToJnt(q_catch, pos_goal, q_init);
+    solver_judge(chain, L, retval, q_catch, q_init, pos_goal, position_pub, loop_rate);
 
     return 0;
 }
