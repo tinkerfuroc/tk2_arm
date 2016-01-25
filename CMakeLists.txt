@@ -7,6 +7,7 @@ project(tk_arm)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
+  geometry_msgs
   message_generation
 )
 
@@ -192,11 +193,18 @@ include_directories(
     /usr/local/include
 )
 
+set(TK2_ARM_SOURCE 
+    ./src/base_arm_controller.cc
+    ./src/arm_controller.cc
+)
 
 add_executable(IKsolver src/arm_IKsolver.cpp)
+add_executable(arm_controller src/arm_control_node.cpp ${TK2_ARM_SOURCE})
 link_directories(/usr/local/lib)
 target_link_libraries(IKsolver ${catkin_LIBRARIES} orocos-kdl)
+target_link_libraries(arm_controller ${catkin_LIBRARIES} orocos-kdl)
 add_dependencies(IKsolver tk_arm_generate_messages_cpp)
+add_dependencies(arm_controller tk_arm_generate_messages_cpp)
 
 # add_executable(IKreceiver src/arm_IKreceiver.cpp)
 # target_link_libraries(IKsolver ${catkin_LIBRARIES})
