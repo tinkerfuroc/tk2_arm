@@ -2,6 +2,7 @@
 #include "tk_arm/OutPos.h"
 #include <kdl/chainfksolverpos_recursive.hpp>
 #include <kdl/chainiksolverpos_lma.hpp>
+#include <std_msgs/String.h>
 #include <cmath>
 #include <assert.h>
 #include <ros/ros.h>
@@ -21,7 +22,7 @@ const double ArmController::kLengthFactor = 10.0;
 const double ArmController::kAngleFactor = 0.0;
 const double ArmController::kMoveStep = 0.005;
 const double ArmController::kCorrectionFactor = 0.003;
-const int ArmController::kCorrectionCount = 0;
+const int ArmController::kCorrectionCount = 5;
 
 const double ArmController::kImageWidth = 640.0;
 const double ArmController::kImageHeight = 480.0;
@@ -37,6 +38,7 @@ ArmController::ArmController(const ArmInfo &arminfo)
 	ros::NodeHandle nh;
 	ros::Rate rate(10);
 	position_pub_ = nh.advertise<tk_arm::OutPos>("arm_pos", 1);
+	mission_pub_ = nh.advertise<std_msgs::String>("mission_done", 1);
 	position_sub_ = nh.subscribe("tk2_vision/arm_target_finder/caught_obj", 1, &ArmController::UpdateCVCorrection, this);
 	assert(arminfo.min_angles.size() == kNumJoint);
 	assert(arminfo.max_angles.size() == kNumJoint);
@@ -111,6 +113,14 @@ void ArmController::PublishNowPose()
 			 msg.pos5 / M_PI * 180.0,
 			 msg.pos6 / M_PI * 180.0);
 	position_pub_.publish(msg);
+}
+
+void ArmController::PublishMissionDone()
+{
+	std_msgs::String msg;
+	msg.data = "Done.";
+	ROS_INFO("%s", msg.data.c_str());
+	mission_pub_.publish(msg);	
 }
 
 bool ArmController::TimeCallback()
@@ -214,6 +224,7 @@ bool ArmController::TimeCallback()
 			ReleaseObject();
 			in_retreiving_ = false;
 			in_init_ = true;
+			PublishMissionDone();
 		}
 	}
 
@@ -302,22 +313,30 @@ void ArmController::OnArriveTarget()
 
 bool ArmController::GraspObject()
 {
-	ros::Duration(grasp_wait_time_).sleep();
-	in_grasp_ = true;
-	PublishNowPose();
-	ROS_INFO("Target grasped!");
-	ros::Duration(grasp_wait_time_).sleep();
-	return true;
+	if (!in_grasp_)
+	{
+		ros::Duration(grasp_wait_time_).sleep();
+		in_grasp_ = true;
+		PublishNowPose();
+		ROS_INFO("Target grasped!");
+		ros::Duration(grasp_wait_time_).sleep();
+		return true;
+	}
+	return false;
 }
 
 bool ArmController::ReleaseObject()
 {
-	ros::Duration(grasp_wait_time_).sleep();
-	in_grasp_ = false;
-	PublishNowPose();
-	ROS_INFO("Target released!");
-	ros::Duration(grasp_wait_time_).sleep();
-	return true;
+	if (in_grasp_)
+	{
+		ros::Duration(grasp_wait_time_).sleep();
+		in_grasp_ = false;
+		PublishNowPose();
+		ROS_INFO("Target released!");
+		ros::Duration(grasp_wait_time_).sleep();
+		return true;
+	}
+	return false;
 }
 
 void ArmController::UpdateCVCorrection(const tk_arm::TargetFound &msg)
@@ -336,12 +355,12 @@ void ArmController::UpdateCVCorrection(const tk_arm::TargetFound &msg)
 void ArmController::SetTargetCorrection()
 {
 	ROS_INFO("Add correction.");
-	double x, y;
-	if(scanf("%lf %lf", &x, &y) != 2) exit(0);
-	target_end_point_.y += x;
-	target_end_point_.z += y;
-	// target_end_point_.x += corr_vector_.x;
-	// target_end_point_.y += corr_vector_.y;
+	// double x, y;
+	// if(scanf("%lf %lf", &x, &y) != 2) exit(0);
+	// target_end_point_.y += x;
+	// target_end_point_.z += y;
+	target_end_point_.y += corr_vector_.x;
+	target_end_point_.z += corr_vector_.y;
 	need_start_ = true;
 }
 

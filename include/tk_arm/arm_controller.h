@@ -39,6 +39,8 @@ public:
 
     void PublishNowPose();
 
+    void PublishMissionDone();
+
     bool TimeCallback();
 
     static const int kNumJoint;
@@ -75,6 +77,7 @@ protected:
     KDL::JntArray now_joint_angles_;
     KDL::JntArray target_joint_angles_;
     ros::Publisher position_pub_;
+    ros::Publisher mission_pub_;
     ros::Subscriber position_sub_;
     
     int grasp_wait_time_;
