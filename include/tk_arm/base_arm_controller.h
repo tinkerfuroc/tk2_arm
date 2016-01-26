@@ -25,7 +25,7 @@ protected:
     virtual void SetJointAngle(const KDL::JntArray &joint_angle) = 0;
     virtual bool CalculateJointAngle(const geometry_msgs::Point &target, KDL::JntArray &joint_angle) = 0;
     virtual bool HasArrivedTarget() = 0;
-    virtual void OnArrive() = 0;
+    virtual void OnArriveTarget() = 0;
 
     bool is_moving_;
 };
