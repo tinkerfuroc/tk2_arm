@@ -36,8 +36,8 @@ const double SEG_INIT[] =
 const double SEG_DUCK[] =
 {	
 	-75       / 180.0 * M_PI,
-	40      / 180.0 * M_PI,
-	80      / 180.0 * M_PI,
+	60      / 180.0 * M_PI,
+	60      / 180.0 * M_PI,
 	-30 / 180.0 * M_PI
 };  //duck angle pos, for kinect
 
@@ -66,11 +66,13 @@ int main(int argc, char *argv[])
 	arm_info.segments[2] = Segment(Joint(Joint::RotY),
 								   Frame(Vector(0.0, 0.0, 0.28 * double(ArmController::kLengthFactor))));
 	ArmController arm_controller(arm_info);
+    ros::Subscriber sub = n.subscribe("arm_target", 10, &ArmController::GoalCallback, &arm_controller);
 	ros::Rate loop_rate(10);
 	
 	while(ros::ok())
 	{
 		arm_controller.TimeCallback();
+        ros::spinOnce();
 		loop_rate.sleep();
 	}
 	return 0;

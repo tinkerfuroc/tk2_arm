@@ -21,24 +21,25 @@ const int ArmController::kErrorRetry = 10;
 const double ArmController::kLengthFactor = 10.0;
 const double ArmController::kAngleFactor = 0.0;
 const double ArmController::kMoveStep = 0.005;
-const double ArmController::kCorrectionFactor = 0.003;
+const double ArmController::kCorrectionFactor = 0.0002;
 const int ArmController::kCorrectionCount = 5;
 
 const double ArmController::kImageWidth = 640.0;
 const double ArmController::kImageHeight = 480.0;
-const double ArmController::kForwardVelocity = 0.02;
+const double ArmController::kForwardVelocity = 0.05;
 const double ArmController::kBlindDistance = 0.05;
 
 ArmController::ArmController(const ArmInfo &arminfo)
 	: arm_info_(arminfo), now_joint_angles_(kNumJoint - 1),
 	  grasp_wait_time_(1), need_start_(false), in_grasp_(false), aligned_with_object_(false),
 	  error_last_time_(false), correction_updated_count_(0),
-	  in_reaching_(false), in_retreiving_(false), in_init_(true), in_duck_(false)
+	  in_reaching_(false), in_retreiving_(false), in_init_(false), in_duck_(true),
+      need_grasp_(false)
 {
 	ros::NodeHandle nh;
 	ros::Rate rate(10);
 	position_pub_ = nh.advertise<tk_arm::OutPos>("arm_pos", 1);
-	mission_pub_ = nh.advertise<std_msgs::String>("mission_done", 1);
+	mission_pub_ = nh.advertise<std_msgs::String>("arm_arrive", 1);
 	position_sub_ = nh.subscribe("tk2_vision/arm_target_finder/caught_obj", 1, &ArmController::UpdateCVCorrection, this);
 	assert(arminfo.min_angles.size() == kNumJoint);
 	assert(arminfo.max_angles.size() == kNumJoint);
@@ -51,7 +52,7 @@ ArmController::ArmController(const ArmInfo &arminfo)
 	}
 	for(int i = 0; i < kNumJoint - 1; i++)
 	{
-		now_joint_angles_(i) = arminfo.init_angles[i];
+		now_joint_angles_(i) = arminfo.duck_angles[i];
 	}
 	now_end_point_ = CalculateEndPostion(now_joint_angles_);
 	SetTarget(now_end_point_);
@@ -60,6 +61,29 @@ ArmController::ArmController(const ArmInfo &arminfo)
 		PublishNowPose();
 		rate.sleep();
 	}
+    need_start_ = false;
+}
+
+void ArmController::GoalCallback(geometry_msgs::Point::ConstPtr new_goal)
+{
+    ROS_INFO("New Goal!");
+    if(new_goal->x < 0.1 && new_goal->y < 0.1 && new_goal->z < 0.1)
+    {
+        return;
+    }
+    object_end_point_ = *new_goal;
+    if(in_duck_)
+    {
+        GoInit();
+        in_duck_ = false;
+        in_init_ = true;
+        need_grasp_ = true;
+        return;
+    }
+    if(in_init_)
+    {
+        need_grasp_ = true;
+    }
 }
 
 void ArmController::SetTarget(const geometry_msgs::Point &point)
@@ -105,13 +129,6 @@ void ArmController::PublishNowPose()
 	msg.pos4 = M_PI / 2 - msg.pos2 - msg.pos3;
 	msg.pos5 = 0;
 	msg.pos6 = in_grasp_;
-	ROS_INFO("OUTPOS:%6.3lf %6.3lf %6.3lf %6.3lf %6.3lf %6.3lf",
-			 msg.pos1 / M_PI * 180.0,
-			 msg.pos2 / M_PI * 180.0,
-			 msg.pos3 / M_PI * 180.0,
-			 msg.pos4 / M_PI * 180.0,
-			 msg.pos5 / M_PI * 180.0,
-			 msg.pos6 / M_PI * 180.0);
 	position_pub_.publish(msg);
 }
 
@@ -127,45 +144,24 @@ bool ArmController::TimeCallback()
 {
 	if (error_last_time_)
 	{
-		ROS_INFO("Error stop. Input x, y, z:\n");
-		geometry_msgs::Point point;
-		printf("input x, y, z\n");
-		if(scanf("%lf %lf %lf", &point.x, &point.y, &point.z) != 3) return 0;
-		SetTarget(point);
-		in_reaching_ = true;
-		in_retreiving_ = false;
-		in_init_ = false;
-		in_duck_ = false;
+		ROS_WARN("Cannot reach");
+        GoInit();
+        need_grasp_ = false;
+        in_reaching_ = false;
+        in_retreiving_ = false;
+		in_init_ = true;
+        in_duck_ = false;
+        error_last_time_ = false;
 	}
 	if (HasArrivedTarget())
 	{
-		if (in_duck_)
+        if (in_init_)
 		{
-			printf("go init?(1 for yes, 0 for no)\n");
-			int input;
-			if(scanf("%d", &input) != 1) return 0;
-			if(input == 1)
-			{
-				GoInit();
-				in_duck_ = false;
-				in_init_ = true;
-			}
-		}
-		else if (in_init_)
-		{
-			printf("go catch?(1 for yes, 2 for duck, 0 for no)\n");
-			int input;
-			if(scanf("%d", &input) != 1) return 0;
-			if(input == 1)
+            PublishMissionDone();
+			if(need_grasp_ = true)
 			{
 				in_init_ = false;
 				in_reaching_ = true;
-			}
-			else if(input == 2)
-			{
-				GoDuck();
-				in_init_ = false;
-				in_duck_ = true;
 			}
 		}
 		else if(in_reaching_)
@@ -173,15 +169,9 @@ bool ArmController::TimeCallback()
 			geometry_msgs::Point point = target_end_point_;
 			if (!aligned_with_object_)
 			{
-				geometry_msgs::Point p;
-				printf("input object depth:\n");
-				if(scanf("%lf", &p.x) != 1) return 0;
-				printf("input object initial x, y:\n");
-				if(scanf("%lf %lf", &p.y, &p.z) != 2) exit(0);
-				SetObject(p);
-
-				point.y = object_end_point_.y;
-				point.z = object_end_point_.z;
+                double factor = now_end_point_.x / object_end_point_.x;
+				point.y = object_end_point_.y * factor;
+				point.z = object_end_point_.z * factor;
 				SetTarget(point);
 				aligned_with_object_ = true;
 			}
@@ -191,7 +181,6 @@ bool ArmController::TimeCallback()
 				{
 					point.x += kForwardVelocity;
 					SetTarget(point);
-					SetTargetCorrection();
 				}
 				else
 				{
@@ -204,8 +193,9 @@ bool ArmController::TimeCallback()
 					else
 					{
 						GoInit();
+                        need_grasp_ = false;
 						in_reaching_ = false;
-						in_retreiving_ = true;
+						in_init_ = true;
 						aligned_with_object_ = false;                            	
 					}
 				}
@@ -214,6 +204,7 @@ bool ArmController::TimeCallback()
 			{
 				GraspObject();
 				GoInit();
+                need_grasp_ = false;
 				in_reaching_ = false;
 				in_retreiving_ = true;
 				aligned_with_object_ = false;
@@ -222,14 +213,12 @@ bool ArmController::TimeCallback()
 		else if(in_retreiving_)
 		{
 			ReleaseObject();
+            GoInit();
+            need_grasp_ = false;
 			in_retreiving_ = false;
 			in_init_ = true;
-			PublishMissionDone();
 		}
 	}
-
-	// ROS_ERROR("target position %6.3lf, %6.3lf, %6.3lf", target_end_point_.x, target_end_point_.y, target_end_point_.z);
-
 	BaseArmController::TimeCallback();
 }
 
@@ -347,21 +336,29 @@ void ArmController::UpdateCVCorrection(const tk_arm::TargetFound &msg)
 		double center_left = msg.object_rect_left + msg.object_rect_width * 0.5;
 		double center_top = msg.object_rect_top + msg.object_rect_height * 0.5;
 		corr_vector_.y = (kImageWidth * 0.5 - center_left) * kCorrectionFactor;
-		corr_vector_.z = (kImageHeight * 0.5 - center_left) * kCorrectionFactor;
-		ROS_INFO("Camera info acquired. Correction: %6.3lf %6.3lf.", corr_vector_.y, corr_vector_.z);
+		corr_vector_.z = (kImageHeight * 0.5 - center_top) * kCorrectionFactor;
+		ROS_INFO("Camera info acquired");
 	}
+    if(in_reaching_)
+    {
+        ROS_INFO("Update in cv callback: corr_info %lf %lf", corr_vector_.y, corr_vector_.z);
+        SetTargetCorrection();
+    }
 }
 
 void ArmController::SetTargetCorrection()
 {
-	ROS_INFO("Add correction.");
-	// double x, y;
-	// if(scanf("%lf %lf", &x, &y) != 2) exit(0);
-	// target_end_point_.y += x;
-	// target_end_point_.z += y;
-	target_end_point_.y += corr_vector_.x;
-	target_end_point_.z += corr_vector_.y;
-	need_start_ = true;
+    if(in_reaching_)
+    {
+        ROS_INFO("Add correction.");
+        // double x, y;
+        // if(scanf("%lf %lf", &x, &y) != 2) exit(0);
+        // target_end_point_.y += x;
+        // target_end_point_.z += y;
+        target_end_point_.y = object_end_point_.y + corr_vector_.y;
+        target_end_point_.z = object_end_point_.z + corr_vector_.z;
+        need_start_ = true;
+    }
 }
 
 geometry_msgs::Point ArmController::CalculateEndPostion(const KDL::JntArray angle)

@@ -39,9 +39,9 @@ public:
 
     void PublishNowPose();
 
-    void PublishMissionDone();
-
     bool TimeCallback();
+
+    void GoalCallback(geometry_msgs::Point::ConstPtr new_goal);
 
     static const int kNumJoint;
     static const int kNumSegment;
@@ -68,6 +68,8 @@ protected:
     virtual void UpdateCVCorrection(const tk_arm::TargetFound& msg);
     virtual void SetTargetCorrection();
 
+    void PublishMissionDone();
+
     geometry_msgs::Point CalculateEndPostion(const KDL::JntArray angle);
     void WarnKDLSolve(int retval);
     bool CheckAngleLegal(const KDL::JntArray &joint_angle);
@@ -90,6 +92,7 @@ protected:
     bool in_init_;
     bool in_duck_;
     bool aligned_with_object_;
+    bool need_grasp_;
 
     geometry_msgs::Point now_end_point_;
     geometry_msgs::Point corr_vector_;
