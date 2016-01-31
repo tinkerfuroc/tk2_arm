@@ -93,6 +93,7 @@ protected:
     bool in_duck_;
     bool aligned_with_object_;
     bool need_grasp_;
+    bool waiting_target_;
 
     geometry_msgs::Point now_end_point_;
     geometry_msgs::Point corr_vector_;

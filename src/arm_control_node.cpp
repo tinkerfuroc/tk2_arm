@@ -28,9 +28,9 @@ const double SEG_MAX[]  =
 const double SEG_INIT[] =
 {
 	0       / 180.0 * M_PI,
-	40      / 180.0 * M_PI,
+	30      / 180.0 * M_PI,
 	100     / 180.0 * M_PI,
-	-50     / 180.0 * M_PI
+	-40     / 180.0 * M_PI
 };  //init angle pos
 
 const double SEG_DUCK[] =

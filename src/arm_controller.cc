@@ -22,7 +22,7 @@ const double ArmController::kLengthFactor = 10.0;
 const double ArmController::kAngleFactor = 0.0;
 const double ArmController::kMoveStep = 0.005;
 const double ArmController::kCorrectionFactor = 0.0002;
-const int ArmController::kCorrectionCount = 5;
+const int ArmController::kCorrectionCount = -1;
 
 const double ArmController::kImageWidth = 640.0;
 const double ArmController::kImageHeight = 480.0;
@@ -34,7 +34,7 @@ ArmController::ArmController(const ArmInfo &arminfo)
 	  grasp_wait_time_(1), need_start_(false), in_grasp_(false), aligned_with_object_(false),
 	  error_last_time_(false), correction_updated_count_(0),
 	  in_reaching_(false), in_retreiving_(false), in_init_(false), in_duck_(true),
-      need_grasp_(false)
+      need_grasp_(false), waiting_target_(false)
 {
 	ros::NodeHandle nh;
 	ros::Rate rate(10);
@@ -74,13 +74,14 @@ void ArmController::GoalCallback(geometry_msgs::Point::ConstPtr new_goal)
     object_end_point_ = *new_goal;
     if(in_duck_)
     {
+        ROS_INFO("Go Init!");
         GoInit();
         in_duck_ = false;
         in_init_ = true;
-        need_grasp_ = true;
+        need_grasp_ = false;
         return;
     }
-    if(in_init_)
+    else
     {
         need_grasp_ = true;
     }
@@ -134,9 +135,9 @@ void ArmController::PublishNowPose()
 
 void ArmController::PublishMissionDone()
 {
-	std_msgs::String msg;
+    std_msgs::String msg;
+    ROS_ERROR("PublishMissionDone!");
 	msg.data = "Done.";
-	ROS_INFO("%s", msg.data.c_str());
 	mission_pub_.publish(msg);	
 }
 
@@ -157,12 +158,20 @@ bool ArmController::TimeCallback()
 	{
         if (in_init_)
 		{
-            PublishMissionDone();
-			if(need_grasp_ = true)
+			if(need_grasp_ == true)
 			{
+                ROS_ERROR("Need grasp!");
+                waiting_target_ = false;
 				in_init_ = false;
 				in_reaching_ = true;
 			}
+            else
+            {
+                if(!waiting_target_)
+                    PublishMissionDone();
+                waiting_target_ = true;
+            }
+            ROS_WARN("Init target: %lf %lf %lf", object_end_point_.x, object_end_point_.y, object_end_point_.z);
 		}
 		else if(in_reaching_)
 		{
@@ -180,6 +189,9 @@ bool ArmController::TimeCallback()
 				if (point.x < object_end_point_.x - kBlindDistance)
 				{
 					point.x += kForwardVelocity;
+                    double factor = point.x / object_end_point_.x;
+                    point.y = object_end_point_.y * factor;
+                    point.z = object_end_point_.z * factor;
 					SetTarget(point);
 				}
 				else
