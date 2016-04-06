@@ -31,6 +31,7 @@ const double ArmController::kBlindDistance = 0.05;
 
 ArmController::ArmController(const ArmInfo &arminfo)
 	: arm_info_(arminfo), now_joint_angles_(kNumJoint - 1),
+	  as_(nh_, "reach_for_object", false), 
 	  grasp_wait_time_(1), need_start_(false), in_grasp_(false), aligned_with_object_(false),
 	  error_last_time_(false), correction_updated_count_(0),
 	  in_reaching_(false), in_retreiving_(false), in_init_(false), in_duck_(true),

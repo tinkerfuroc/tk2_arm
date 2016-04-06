@@ -10,9 +10,16 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   geometry_msgs
   message_generation
+  genmsg
+  actionlib_msgs
+  actionlib
 )
+find_package(Boost REQUIRED COMPONENTS system)
 
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 find_package(Eigen3 REQUIRED)
+include_directories(EIGEN3_INCLUDE_DIR)
+# find_package(Eigen3 REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -48,11 +55,11 @@ find_package(Eigen3 REQUIRED)
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-add_message_files(
-  FILES
-  OutPos.msg
-  TargetFound.msg
-)
+# add_message_files(
+#   FILES
+#   OutPos.msg
+#   TargetFound.msg
+# )
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -62,17 +69,18 @@ add_message_files(
 # )
 
 ## Generate actions in the 'action' folder
-# add_action_files(
-#   FILES
-#   Action1.action
-#   Action2.action
-# )
+add_action_files(
+  DIRECTORY action
+  FILES ArmReachObject.action
+)
 
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
   DEPENDENCIES
   std_msgs
-  sensor_msgs
+  geometry_msgs
+  # sensor_msgs
+  actionlib_msgs
 )
 
 ################################################
@@ -109,6 +117,7 @@ catkin_package(
 #  LIBRARIES tk_arm
 #  CATKIN_DEPENDS roscpp std_msgs
 #  DEPENDS system_lib
+  CATKIN_DEPENDS actionlib_msgs
 )
 
 ###########
@@ -197,23 +206,24 @@ include_directories(
 )
 
 set(TK2_ARM_SOURCE 
-    ./src/base_arm_controller.cc
-    ./src/arm_controller.cc
+    # ./src/base_arm_controller.cc
+    # ./src/arm_controller.cc
+    ./src/simple_arm_controller.cc
 )
 
 link_directories(/usr/local/lib)
 
-add_executable(IKsolver src/arm_IKsolver.cpp)
+# add_executable(IKsolver src/arm_IKsolver.cpp)
 add_executable(arm_controller src/arm_control_node.cpp ${TK2_ARM_SOURCE})
-target_link_libraries(IKsolver ${catkin_LIBRARIES} orocos-kdl)
+# target_link_libraries(IKsolver ${catkin_LIBRARIES} orocos-kdl)
 target_link_libraries(arm_controller ${catkin_LIBRARIES} orocos-kdl)
-add_dependencies(IKsolver tk_arm_generate_messages_cpp)
+# add_dependencies(IKsolver tk_arm_generate_messages_cpp)
 add_dependencies(arm_controller tk_arm_generate_messages_cpp)
 
+add_executable(actionlib_test src/actionlib_test.cpp ${TK2_ARM_SOURCE})
+target_link_libraries(actionlib_test ${catkin_LIBRARIES} orocos-kdl)
+add_dependencies(actionlib_test tk_arm_generate_messages_cpp)
 
-add_executable(set_arm src/set_arm.cpp)
-target_link_libraries(set_arm ${catkin_LIBRARIES} orocos-kdl)
-add_dependencies(set_arm tk_arm_generate_messages_cpp)
-# add_executable(IKreceiver src/arm_IKreceiver.cpp)
-# target_link_libraries(IKsolver ${catkin_LIBRARIES})
-# add_dependencies(IKreceiver tk_arm_generate_messages_cpp)
+# add_executable(set_arm src/set_arm.cpp)
+# target_link_libraries(set_arm ${catkin_LIBRARIES} orocos-kdl)
+# add_dependencies(set_arm tk_arm_generate_messages_cpp)
