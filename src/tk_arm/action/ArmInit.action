@@ -1,0 +1,8 @@
+#Define the goal
+int32 state
+---
+# Define the result
+bool is_reached
+---
+# Define a feedback message
+float32 percent_complete
