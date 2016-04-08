@@ -38,26 +38,26 @@ const double SimpleArmController::kBaseHeightDiff = 0.1;
 
 const double SEG_MIN[]  =
 {
-	-77.1   / 180.0 * M_PI,
-	-0.05235988,
-	0.52359878,
-	-50.0  / 180.0 * M_PI
+	-94 / 180.0 * M_PI,
+	-3  / 180.0 * M_PI,
+	45  / 180.0 * M_PI,
+	-78 / 180.0 * M_PI
 };  //min angle pos
 
 const double SEG_MAX[]  =
 {
-	44.1    / 180.0 * M_PI,
-	1.6406095,
-	2.3500000,
-	50 / 180.0 * M_PI
+	32  / 180.0 * M_PI,
+	94  / 180.0 * M_PI,
+	150 / 180.0 * M_PI,
+	59  / 180.0 * M_PI
 };  //max angle pos
 
 const double SEG_INIT[] =
 {
-	0       / 180.0 * M_PI,
-	30      / 180.0 * M_PI,
-	100     / 180.0 * M_PI,
-	-40     / 180.0 * M_PI
+	-94 / 180.0 * M_PI,
+	94  / 180.0 * M_PI,
+	135 / 180.0 * M_PI,
+	0   / 180.0 * M_PI
 };  //init angle pos
 
 SimpleArmController::SimpleArmController(std::string server_name_) : 
@@ -190,7 +190,7 @@ bool SimpleArmController::GoInit()
     KDL::JntArray initial_joint_angles_(current_joint_angles_);
 	for (int i = 0; i < interpolationNum; ++i)
 	{
-		   current_joint_angles_(0) = (target_joint_angles_(0) * i + initial_joint_angles_(0) * (interpolationNum - i)) / interpolationNum;
+		current_joint_angles_(0) = (target_joint_angles_(0) * i + initial_joint_angles_(0) * (interpolationNum - i)) / interpolationNum;
 	    current_joint_angles_(1) = (target_joint_angles_(1) * i + initial_joint_angles_(1) * (interpolationNum - i)) / interpolationNum;
 		current_joint_angles_(2) = (target_joint_angles_(2) * i + initial_joint_angles_(2) * (interpolationNum - i)) / interpolationNum;
 
@@ -276,7 +276,7 @@ void SimpleArmController::MoveArm()
 	shoulder_rotation_pub_.publish(msg);
 	msg.data = current_joint_angles_(1);
 	shoulder_flexion_pub_.publish(msg);
-	msg.data = current_joint_angles_(2);
+	msg.data = M_PI - current_joint_angles_(2);
 	elbow_pub_.publish(msg);
 	msg.data = M_PI / 2 - current_joint_angles_(1) - current_joint_angles_(2);
 	wrist_pub_.publish(msg);
