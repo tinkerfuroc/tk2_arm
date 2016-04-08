@@ -1,11 +1,10 @@
 #include "tk_arm/simple_arm_controller.h"
 #include <kdl/chainfksolverpos_recursive.hpp>
 #include <kdl/chainiksolverpos_lma.hpp>
-#include <std_msgs/String.h>
+#include <std_msgs/Float64.h>
 #include <cmath>
 #include <assert.h>
 #include <ros/ros.h>
-#include <iostream>
 
 using namespace tinker::arm;
 using KDL::Joint;
@@ -31,6 +30,11 @@ const double SimpleArmController::kDegreeInterpolation = (1.0/180.0*M_PI);
 
 const double SimpleArmController::kForwardVelocity = 0.05;
 const double SimpleArmController::kBlindDistance = 0.05;
+
+const double SimpleArmController::kBaseHeightMax = 0.0;
+const double SimpleArmController::kBaseHeightMin = 0.4;
+const double SimpleArmController::kBaseMoveStep = 0.01;  
+const double SimpleArmController::kBaseHeightDiff = 0.1;  
 
 const double SEG_MIN[]  =
 {
@@ -59,8 +63,17 @@ const double SEG_INIT[] =
 SimpleArmController::SimpleArmController(std::string server_name_) : 
 	as_(nh_, server_name_, boost::bind(&SimpleArmController::PositionCallback, this, _1), false),
 	as_init_(nh_, server_name_ + "1", boost::bind(&SimpleArmController::InitCallback, this, _1), false),
-	current_joint_angles_(kNumJoint - 1), target_joint_angles_(kNumJoint - 1), in_grasp_(false)
+	rate_(10), current_joint_angles_(kNumJoint - 1), target_joint_angles_(kNumJoint - 1), 
+	in_grasp_(false), current_height_(0)
 {
+
+	base_pub_ = nh_.advertise<std_msgs::Float64>("/base_joint_position_controller/command", 0);
+	shoulder_rotation_pub_ = nh_.advertise<std_msgs::Float64>("/shoulder_rotation_joint_position_controller/command", 0);
+	shoulder_flexion_pub_ = nh_.advertise<std_msgs::Float64>("/shoulder_fexion_joint_position_controller/command", 0);
+	elbow_pub_ = nh_.advertise<std_msgs::Float64>("/elbow_joint_position_controller/command", 0);
+	wrist_pub_ = nh_.advertise<std_msgs::Float64>("wrist_pub_", 1);
+	hand_pub_ = nh_.advertise<std_msgs::Float64>("hand_pub_", 1);
+	
 	// load arm parameter into arm_info_
 	arm_info_.min_angles.resize(SimpleArmController::kNumJoint);
 	arm_info_.max_angles.resize(SimpleArmController::kNumJoint);
@@ -154,6 +167,8 @@ void SimpleArmController::InitCallback(const tk_arm::ArmInitGoalConstPtr &new_go
 
 bool SimpleArmController::GoInit()
 {
+	target_height_ = kBaseHeightMin;
+	MoveBase();
 	// set goal to init angles
 	for(int i = 0; i < kNumJoint - 1; i++)
 	{
@@ -175,19 +190,18 @@ bool SimpleArmController::GoInit()
     KDL::JntArray initial_joint_angles_(current_joint_angles_);
 	for (int i = 0; i < interpolationNum; ++i)
 	{
-		ros::Rate rate(10);
-	    current_joint_angles_(0) = (target_joint_angles_(0) * i + initial_joint_angles_(0) * (interpolationNum - i)) / interpolationNum;
+		   current_joint_angles_(0) = (target_joint_angles_(0) * i + initial_joint_angles_(0) * (interpolationNum - i)) / interpolationNum;
 	    current_joint_angles_(1) = (target_joint_angles_(1) * i + initial_joint_angles_(1) * (interpolationNum - i)) / interpolationNum;
 		current_joint_angles_(2) = (target_joint_angles_(2) * i + initial_joint_angles_(2) * (interpolationNum - i)) / interpolationNum;
 
-	    PublishCurrentPose();
+	    MoveArm();
 	    ros::spinOnce();
-	    rate.sleep();
+	    rate_.sleep();
 	}
 	current_joint_angles_(0) = target_joint_angles_(0);
 	current_joint_angles_(1) = target_joint_angles_(1);
 	current_joint_angles_(2) = target_joint_angles_(2);
-    PublishCurrentPose();	
+    MoveArm();	
 
 	return true;
 }
@@ -195,12 +209,13 @@ bool SimpleArmController::GoInit()
 bool SimpleArmController::GoToPosition()
 {
 	// interpolate on current-to-object direction
+	ROS_DEBUG("Go to position.");
 	bool is_ok = true;
     std::vector<double> msg;
     msg.resize(kNumJoint);
+    MoveBase();
 	while (!HasArrivedObject())
 	{
-		ros::Rate rate(10);
 		double x = object_end_point_.x - current_end_point_.x;
 		double y = object_end_point_.y - current_end_point_.y;
 		double z = object_end_point_.z - current_end_point_.z;
@@ -216,26 +231,50 @@ bool SimpleArmController::GoToPosition()
 		}
 
 	    current_joint_angles_ = target_joint_angles_;
-	    PublishCurrentPose();
+	    MoveArm();
 	    ros::spinOnce();
-	    rate.sleep();
+	    rate_.sleep();
 	}
 	return is_ok;
 }
 
-void SimpleArmController::PublishCurrentPose()
+bool SimpleArmController::MoveBase()
+{	
+	std_msgs::Float64 msg;
+	target_height_ = std::min(current_end_point_.z - kBaseHeightDiff, kBaseHeightMax);
+	ROS_INFO("Move base to %5.2lf. Target at %5.2lf", target_height_, current_end_point_.z);
+	while(abs(current_height_ - target_height_) > 0.01)
+	{
+		current_height_ += kBaseMoveStep;	
+		msg.data = current_height_;
+		base_pub_.publish(msg);
+	    ros::spinOnce();
+	    rate_.sleep();
+	}
+	current_height_ = target_height_;	
+	msg.data = current_height_;
+	base_pub_.publish(msg);
+
+	current_end_point_.z = current_end_point_.z - target_height_;
+	return true;
+}
+
+void SimpleArmController::MoveArm()
 {
-	ROS_INFO("\033[0;34mPublishing angle: %5.2lf %5.2lf %5.2lf\033[0;0m", current_joint_angles_(0)*180/M_PI, current_joint_angles_(1)*180/M_PI, 
-		current_joint_angles_(2)*180/M_PI);
+	// ROS_INFO("\033[0;34mPublishing angle: %5.2lf %5.2lf %5.2lf\033[0;0m", current_joint_angles_(0)*180/M_PI, current_joint_angles_(1)*180/M_PI, 
+		// current_joint_angles_(2)*180/M_PI);
 	current_end_point_ = AngleToPosition(current_joint_angles_);
-	// tk_arm::OutPos msg;
-	// msg.pos1 = current_joint_angles_(0);
-	// msg.pos2 = current_joint_angles_(1);
-	// msg.pos3 = current_joint_angles_(2);
-	// msg.pos4 = M_PI / 2 - msg.pos2 - msg.pos3;
-	// msg.pos5 = 0;
-	// msg.pos6 = in_grasp_;
-	// position_pub_.publish(msg);
+	std_msgs::Float64 msg;
+	msg.data = current_joint_angles_(0);
+	shoulder_rotation_pub_.publish(msg);
+	msg.data = current_joint_angles_(1);
+	shoulder_flexion_pub_.publish(msg);
+	msg.data = current_joint_angles_(2);
+	elbow_pub_.publish(msg);
+	msg.data = M_PI / 2 - current_joint_angles_(1) - current_joint_angles_(2);
+	wrist_pub_.publish(msg);
+	msg.data = in_grasp_;
+	hand_pub_.publish(msg);
 }
 
 bool SimpleArmController::PositionToAngle(const geometry_msgs::Point &target, KDL::JntArray &joint_angle)
@@ -297,7 +336,7 @@ bool SimpleArmController::GraspObject()
 	{
 		ros::Duration(kGraspWaitTime).sleep();
 		in_grasp_ = true;
-		PublishCurrentPose();
+		MoveArm();
 		ROS_INFO("\033[1;35mObject grasped!\033[0;0m");
 		ros::Duration(kGraspWaitTime).sleep();
 		return true;
@@ -311,7 +350,7 @@ bool SimpleArmController::ReleaseObject()
 	{
 		ros::Duration(kGraspWaitTime).sleep();
 		in_grasp_ = false;
-		PublishCurrentPose();
+		MoveArm();
 		ROS_INFO("\033[1;35mObject released!\033[0;0m");
 		ros::Duration(kGraspWaitTime).sleep();
 		return true;
@@ -328,7 +367,7 @@ geometry_msgs::Point SimpleArmController::AngleToPosition(const KDL::JntArray an
 	end_point.x = pos.p.x() / double(kLengthFactor);
 	end_point.y = pos.p.y() / double(kLengthFactor);
 	end_point.z = pos.p.z() / double(kLengthFactor);
-	ROS_INFO("\033[0;36mCurrent Position: %5.2lf %5.2lf %5.2lf\033[0;0m", end_point.x, end_point.y, end_point.z);
+	// ROS_INFO("\033[0;36mCurrent Position: %5.2lf %5.2lf %5.2lf\033[0;0m", end_point.x, end_point.y, end_point.z);
 	return end_point;
 }
 

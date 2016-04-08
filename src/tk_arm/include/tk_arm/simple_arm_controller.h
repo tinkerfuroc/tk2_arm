@@ -41,11 +41,16 @@ public:
 
     static const double kLengthFactor;
     static const double kAngleFactor;
-    static const double kMoveStep;   
+    static const double kMoveStep;    
     static const double kDegreeInterpolation; 
 
     static const double kForwardVelocity;
     static const double kBlindDistance;
+
+    static const double kBaseHeightMax;
+    static const double kBaseHeightMin;
+    static const double kBaseMoveStep;
+    static const double kBaseHeightDiff;    
 
 protected:
     virtual bool PositionToAngle(const geometry_msgs::Point &target, KDL::JntArray &joint_angle);
@@ -54,9 +59,10 @@ protected:
     virtual bool GraspObject();
     virtual bool ReleaseObject();
 
-    virtual void PublishCurrentPose();
+    virtual void MoveArm();
     virtual bool GoToPosition();
     virtual bool GoInit();
+    virtual bool MoveBase();
 
     bool HasArrivedTarget();
     bool HasArrivedObject();
@@ -68,12 +74,16 @@ protected:
     KDL::Chain chain_; // the arm
 
     // publishers for PublishCurrentPose()
-    ros::Publisher position_pub_;
-    ros::Publisher mission_pub_;
-    ros::Subscriber position_sub_;
+    ros::NodeHandle nh_;
+    ros::Rate rate_;
+    ros::Publisher base_pub_;
+    ros::Publisher shoulder_rotation_pub_;
+    ros::Publisher shoulder_flexion_pub_;
+    ros::Publisher elbow_pub_;
+    ros::Publisher wrist_pub_;
+    ros::Publisher hand_pub_;
 
     // actionlib servers
-    ros::NodeHandle nh_;
     actionlib::SimpleActionServer<tk_arm::ArmReachObjectAction> as_;
     actionlib::SimpleActionServer<tk_arm::ArmInitAction> as_init_;
     tk_arm::ArmReachObjectResult result_;
@@ -85,6 +95,8 @@ protected:
     // arm states
     KDL::JntArray current_joint_angles_;
     KDL::JntArray target_joint_angles_;
+    double current_height_;
+    double target_height_;
 
     geometry_msgs::Point current_end_point_;
     geometry_msgs::Point target_end_point_; // TARGET is the next midway-point for arm
