@@ -31,8 +31,8 @@ const double SimpleArmController::kDegreeInterpolation = (1.0/180.0*M_PI);
 const double SimpleArmController::kForwardVelocity = 0.05;
 const double SimpleArmController::kBlindDistance = 0.05;
 
-const double SimpleArmController::kBaseHeightMax = 0.0;
-const double SimpleArmController::kBaseHeightMin = 0.4;
+const double SimpleArmController::kBaseHeightMin = 0.0;
+const double SimpleArmController::kBaseHeightMax = 0.4;
 const double SimpleArmController::kBaseMoveStep = 0.01;  
 const double SimpleArmController::kBaseHeightDiff = 0.1;  
 
@@ -64,7 +64,7 @@ SimpleArmController::SimpleArmController(std::string server_name_) :
 	as_(nh_, server_name_, boost::bind(&SimpleArmController::PositionCallback, this, _1), false),
 	as_init_(nh_, server_name_ + "1", boost::bind(&SimpleArmController::InitCallback, this, _1), false),
 	rate_(10), current_joint_angles_(kNumJoint - 1), target_joint_angles_(kNumJoint - 1), 
-	in_grasp_(false), current_height_(0)
+	in_grasp_(false), current_height_(0.0)
 {
 
 	base_pub_ = nh_.advertise<std_msgs::Float64>("/base_joint_position_controller/command", 0);
@@ -117,15 +117,15 @@ SimpleArmController::SimpleArmController(std::string server_name_) :
 void SimpleArmController::PositionCallback(const tk_arm::ArmReachObjectGoalConstPtr &new_goal)
 {
 	ROS_ASSERT(new_goal->grasp_state <= 3 && new_goal->grasp_state >= 0);
-    ROS_INFO("New Goal! [%4.2lf %4.2lf %4.2lf]:%s", new_goal->pos.x, new_goal->pos.y, new_goal->pos.z, 
-    	new_goal->grasp_state == 2 ? "release" : new_goal->grasp_state == 1 ? "grasp" : "keep_state");
-
 	object_end_point_ = new_goal->pos;
 	need_grasp_ = new_goal->grasp_state;
+
+    ROS_INFO("New Goal! [%4.2lf %4.2lf %4.2lf]:%s", object_end_point_.x, object_end_point_.y, object_end_point_.z, 
+    	need_grasp_ == 2 ? "release" : need_grasp_ == 1 ? "grasp" : "keep_state");
     if (HasArrivedObject())
     {
 		ROS_INFO("No move needed.");
-		switch (new_goal->grasp_state)
+		switch (need_grasp_)
 		{
 			case 1: GraspObject(); break;
 			case 2: ReleaseObject(); break;
@@ -146,7 +146,7 @@ void SimpleArmController::PositionCallback(const tk_arm::ArmReachObjectGoalConst
 			return;
 		}
 		ROS_INFO("Go to position succeded.");
-		switch (new_goal->grasp_state)
+		switch (need_grasp_)
 		{
 			case 1: GraspObject(); break;
 			case 2: ReleaseObject(); break;
@@ -208,12 +208,15 @@ bool SimpleArmController::GoInit()
 
 bool SimpleArmController::GoToPosition()
 {
-	// interpolate on current-to-object direction
-	ROS_DEBUG("Go to position.");
+	// interpolate on current-to-object direction	
+    ROS_INFO("Go to position [%4.2lf %4.2lf %4.2lf]", object_end_point_.x, object_end_point_.y, object_end_point_.z);
 	bool is_ok = true;
     std::vector<double> msg;
     msg.resize(kNumJoint);
     MoveBase();
+	ROS_INFO("Go to position [%4.2lf %4.2lf %4.2lf] from [%4.2lf %4.2lf %4.2lf]...", 
+		object_end_point_.x, object_end_point_.y, object_end_point_.z,
+		current_end_point_.x, current_end_point_.y, current_end_point_.z);
 	while (!HasArrivedObject())
 	{
 		double x = object_end_point_.x - current_end_point_.x;
@@ -234,20 +237,23 @@ bool SimpleArmController::GoToPosition()
 	    MoveArm();
 	    ros::spinOnce();
 	    rate_.sleep();
-	}
+	}	
+	ROS_INFO("Go to position succedded.");
 	return is_ok;
 }
 
 bool SimpleArmController::MoveBase()
 {	
 	std_msgs::Float64 msg;
-	target_height_ = std::min(current_end_point_.z - kBaseHeightDiff, kBaseHeightMax);
-	ROS_INFO("Move base to %5.2lf. Target at %5.2lf", target_height_, current_end_point_.z);
-	while(abs(current_height_ - target_height_) > 0.01)
+	target_height_ = std::max(std::min(object_end_point_.z - kBaseHeightDiff, kBaseHeightMax), kBaseHeightMin);
+	bool direction = target_height_ > current_height_;
+	ROS_INFO("Move base to %5.2lf. Current base height: %5.2lf. Moving %s.", target_height_, current_height_, direction ? "upward" : "downward");
+	while(fabs(current_height_ - target_height_) > 0.01)
 	{
-		current_height_ += kBaseMoveStep;	
+		current_height_ += kBaseMoveStep * (direction ? 1.0: -1.0);	
 		msg.data = current_height_;
 		base_pub_.publish(msg);
+		ROS_INFO("\033[0;35mBase moved to %5.2lf.\033[0;0m", current_height_);
 	    ros::spinOnce();
 	    rate_.sleep();
 	}
@@ -255,14 +261,15 @@ bool SimpleArmController::MoveBase()
 	msg.data = current_height_;
 	base_pub_.publish(msg);
 
-	current_end_point_.z = current_end_point_.z - target_height_;
+	object_end_point_.z = object_end_point_.z - target_height_;
+	ROS_INFO("Move base succedded.");
 	return true;
 }
 
 void SimpleArmController::MoveArm()
 {
-	// ROS_INFO("\033[0;34mPublishing angle: %5.2lf %5.2lf %5.2lf\033[0;0m", current_joint_angles_(0)*180/M_PI, current_joint_angles_(1)*180/M_PI, 
-		// current_joint_angles_(2)*180/M_PI);
+	ROS_INFO("\033[0;34mPublishing angle: %5.2lf %5.2lf %5.2lf\033[0;0m", current_joint_angles_(0)*180/M_PI, current_joint_angles_(1)*180/M_PI, 
+		current_joint_angles_(2)*180/M_PI);
 	current_end_point_ = AngleToPosition(current_joint_angles_);
 	std_msgs::Float64 msg;
 	msg.data = current_joint_angles_(0);
@@ -367,7 +374,7 @@ geometry_msgs::Point SimpleArmController::AngleToPosition(const KDL::JntArray an
 	end_point.x = pos.p.x() / double(kLengthFactor);
 	end_point.y = pos.p.y() / double(kLengthFactor);
 	end_point.z = pos.p.z() / double(kLengthFactor);
-	// ROS_INFO("\033[0;36mCurrent Position: %5.2lf %5.2lf %5.2lf\033[0;0m", end_point.x, end_point.y, end_point.z);
+	ROS_INFO("\033[0;36mCurrent Position: %5.2lf %5.2lf %5.2lf\033[0;0m", end_point.x, end_point.y, end_point.z);
 	return end_point;
 }
 
