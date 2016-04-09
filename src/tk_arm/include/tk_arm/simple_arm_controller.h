@@ -43,6 +43,7 @@ public:
     static const double kAngleFactor;
     static const double kMoveStep;    
     static const double kDegreeInterpolation; 
+    static const double kShoulderMoveStep;    
 
     static const double kForwardVelocity;
     static const double kBlindDistance;
@@ -50,7 +51,8 @@ public:
     static const double kBaseHeightMax;
     static const double kBaseHeightMin;
     static const double kBaseMoveStep;
-    static const double kBaseHeightDiff;    
+    static const double kBaseHeightDiff;  
+    static const double kHandLength;  
 
 protected:
     virtual bool PositionToAngle(const geometry_msgs::Point &target, KDL::JntArray &joint_angle);
@@ -62,6 +64,7 @@ protected:
     virtual void MoveArm();
     virtual bool GoToPosition();
     virtual bool GoInit();
+    virtual void TurnShoulder();
     virtual bool MoveBase();
 
     bool HasArrivedTarget();
@@ -80,7 +83,8 @@ protected:
     ros::Publisher shoulder_rotation_pub_;
     ros::Publisher shoulder_flexion_pub_;
     ros::Publisher elbow_pub_;
-    ros::Publisher wrist_pub_;
+    ros::Publisher wrist_deviation_pub_;
+    ros::Publisher wrist_extension_pub_;
     ros::Publisher hand_pub_;
 
     // actionlib servers
@@ -91,6 +95,7 @@ protected:
     
     int need_grasp_; // 1 to grasp, 2 to release, 0 to do nothing 
     bool in_grasp_;
+    bool in_init_;
 
     // arm states
     KDL::JntArray current_joint_angles_;

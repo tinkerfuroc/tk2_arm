@@ -27,19 +27,20 @@ const double SimpleArmController::kLengthFactor = 10.0;
 const double SimpleArmController::kAngleFactor = 0.0;
 const double SimpleArmController::kMoveStep = 0.005;
 const double SimpleArmController::kDegreeInterpolation = (1.0/180.0*M_PI);
+const double SimpleArmController::kShoulderMoveStep = 0.05;
 
 const double SimpleArmController::kForwardVelocity = 0.05;
 const double SimpleArmController::kBlindDistance = 0.05;
 
 const double SimpleArmController::kBaseHeightMin = 0.0;
-const double SimpleArmController::kBaseHeightMax = 0.4;
-const double SimpleArmController::kBaseMoveStep = 0.01;  
-const double SimpleArmController::kBaseHeightDiff = 0.1;  
+const double SimpleArmController::kBaseHeightMax = 0.3;
+const double SimpleArmController::kBaseHeightDiff = 0.1; 
+const double SimpleArmController::kHandLength = 0.12;
 
 const double SEG_MIN[]  =
 {
 	-94 / 180.0 * M_PI,
-	-3  / 180.0 * M_PI,
+	-4  / 180.0 * M_PI,
 	45  / 180.0 * M_PI,
 	-78 / 180.0 * M_PI
 };  //min angle pos
@@ -47,7 +48,7 @@ const double SEG_MIN[]  =
 const double SEG_MAX[]  =
 {
 	32  / 180.0 * M_PI,
-	94  / 180.0 * M_PI,
+	93  / 180.0 * M_PI,
 	150 / 180.0 * M_PI,
 	59  / 180.0 * M_PI
 };  //max angle pos
@@ -55,24 +56,25 @@ const double SEG_MAX[]  =
 const double SEG_INIT[] =
 {
 	-94 / 180.0 * M_PI,
-	94  / 180.0 * M_PI,
+	-4  / 180.0 * M_PI,
 	135 / 180.0 * M_PI,
 	0   / 180.0 * M_PI
 };  //init angle pos
 
 SimpleArmController::SimpleArmController(std::string server_name_) : 
-	as_(nh_, server_name_, boost::bind(&SimpleArmController::PositionCallback, this, _1), false),
-	as_init_(nh_, server_name_ + "1", boost::bind(&SimpleArmController::InitCallback, this, _1), false),
+	as_(nh_, "arm_reach_position", boost::bind(&SimpleArmController::PositionCallback, this, _1), false),
+	as_init_(nh_, "arm_reset", boost::bind(&SimpleArmController::InitCallback, this, _1), false),
 	rate_(10), current_joint_angles_(kNumJoint - 1), target_joint_angles_(kNumJoint - 1), 
-	in_grasp_(false), current_height_(0.0)
+	in_grasp_(false), current_height_(0.0), in_init_(false)
 {
 
 	base_pub_ = nh_.advertise<std_msgs::Float64>("/base_joint_position_controller/command", 0);
 	shoulder_rotation_pub_ = nh_.advertise<std_msgs::Float64>("/shoulder_rotation_joint_position_controller/command", 0);
-	shoulder_flexion_pub_ = nh_.advertise<std_msgs::Float64>("/shoulder_fexion_joint_position_controller/command", 0);
+	shoulder_flexion_pub_ = nh_.advertise<std_msgs::Float64>("/shoulder_flexion_joint_position_controller/command", 0);
 	elbow_pub_ = nh_.advertise<std_msgs::Float64>("/elbow_joint_position_controller/command", 0);
-	wrist_pub_ = nh_.advertise<std_msgs::Float64>("wrist_pub_", 1);
-	hand_pub_ = nh_.advertise<std_msgs::Float64>("hand_pub_", 1);
+	wrist_deviation_pub_ = nh_.advertise<std_msgs::Float64>("/wrist_deviation_controller/command", 0);
+    wrist_extension_pub_ = nh_.advertise<std_msgs::Float64>("/wrist_extension_controller/command", 0);
+	hand_pub_ = nh_.advertise<std_msgs::Float64>("/claw_controller/command", 0);
 	
 	// load arm parameter into arm_info_
 	arm_info_.min_angles.resize(SimpleArmController::kNumJoint);
@@ -89,9 +91,9 @@ SimpleArmController::SimpleArmController(std::string server_name_) :
 	arm_info_.segments[0] = Segment(Joint(Joint::RotZ),
 								   Frame(Vector(0.0, 0.0, 0.01 * double(SimpleArmController::kLengthFactor))));
 	arm_info_.segments[1] = Segment(Joint(Joint::RotY),
-								   Frame(Vector(0.0, 0.0, 0.35 * double(SimpleArmController::kLengthFactor))));
+								   Frame(Vector(0.0, 0.0, 0.40 * double(SimpleArmController::kLengthFactor))));
 	arm_info_.segments[2] = Segment(Joint(Joint::RotY),
-								   Frame(Vector(0.0, 0.0, 0.28 * double(SimpleArmController::kLengthFactor))));
+								   Frame(Vector(0.0, 0.0, 0.40 * double(SimpleArmController::kLengthFactor))));
 
 	// build the arm model: chain_
 	for(int i = 0; i < kNumSegment; i++)
@@ -112,12 +114,16 @@ SimpleArmController::SimpleArmController(std::string server_name_) :
 	as_.start();
 	as_init_.start();
 	ROS_INFO("Server started.");
+    TurnShoulder();
 }
 
 void SimpleArmController::PositionCallback(const tk_arm::ArmReachObjectGoalConstPtr &new_goal)
 {
 	ROS_ASSERT(new_goal->grasp_state <= 3 && new_goal->grasp_state >= 0);
-	object_end_point_ = new_goal->pos;
+	double xy_length = sqrt(new_goal->pos.x * new_goal->pos.x + new_goal->pos.y * new_goal->pos.y);
+	object_end_point_.x = new_goal->pos.x * (xy_length - kHandLength) / xy_length;
+	object_end_point_.y = new_goal->pos.y * (xy_length - kHandLength) / xy_length;
+	object_end_point_.z = new_goal->pos.z;
 	need_grasp_ = new_goal->grasp_state;
 
     ROS_INFO("New Goal! [%4.2lf %4.2lf %4.2lf]:%s", object_end_point_.x, object_end_point_.y, object_end_point_.z, 
@@ -159,7 +165,7 @@ void SimpleArmController::PositionCallback(const tk_arm::ArmReachObjectGoalConst
 
 void SimpleArmController::InitCallback(const tk_arm::ArmInitGoalConstPtr &new_goal)
 {
-	ROS_INFO("Go Init! [%d]", new_goal->state);
+	ROS_INFO("Go Init! [%d]", new_goal->state);	
 	result_init_.is_reached = GoInit();
 	ROS_INFO("%s", result_init_.is_reached ? "Go init success." : "Go init failed.");
 	as_init_.setSucceeded(result_init_);
@@ -167,18 +173,11 @@ void SimpleArmController::InitCallback(const tk_arm::ArmInitGoalConstPtr &new_go
 
 bool SimpleArmController::GoInit()
 {
-	target_height_ = kBaseHeightMin;
-	MoveBase();
-	// set goal to init angles
-	for(int i = 0; i < kNumJoint - 1; i++)
-	{
-		target_joint_angles_(i) = arm_info_.init_angles[i];
-	}
-	target_end_point_ = AngleToPosition(target_joint_angles_);
-
-	// interpolation in motor angle
 	double maxDegree = 0.0;
 	int interpolationNum = 0.0;
+	target_end_point_.x = 0.3;
+	target_end_point_.y = 0.0;
+	PositionToAngle(target_end_point_, target_joint_angles_);
 	for (int i = 0; i < 3; ++i)
 	{
 	    if (fabs(target_joint_angles_(i) - current_joint_angles_(i)) > maxDegree)
@@ -201,8 +200,43 @@ bool SimpleArmController::GoInit()
 	current_joint_angles_(0) = target_joint_angles_(0);
 	current_joint_angles_(1) = target_joint_angles_(1);
 	current_joint_angles_(2) = target_joint_angles_(2);
+    MoveArm();
+
+	target_height_ = kBaseHeightMin;
+	MoveBase();
+	// set goal to init angles
+	for(int i = 0; i < kNumJoint - 1; i++)
+	{
+		target_joint_angles_(i) = arm_info_.init_angles[i];
+	}
+	target_end_point_ = AngleToPosition(target_joint_angles_);
+
+	// interpolation in motor angle
+	maxDegree = 0.0;
+	interpolationNum = 0.0;
+	for (int i = 0; i < 3; ++i)
+	{
+	    if (fabs(target_joint_angles_(i) - current_joint_angles_(i)) > maxDegree)
+	        maxDegree = fabs(target_joint_angles_(i) - current_joint_angles_(i));
+	}
+	interpolationNum = maxDegree / kDegreeInterpolation + 1;
+    initial_joint_angles_ = current_joint_angles_;
+	for (int i = 0; i < interpolationNum; ++i)
+	{
+		current_joint_angles_(0) = (target_joint_angles_(0) * i + initial_joint_angles_(0) * (interpolationNum - i)) / interpolationNum;
+	    current_joint_angles_(1) = (target_joint_angles_(1) * i + initial_joint_angles_(1) * (interpolationNum - i)) / interpolationNum;
+		current_joint_angles_(2) = (target_joint_angles_(2) * i + initial_joint_angles_(2) * (interpolationNum - i)) / interpolationNum;
+
+	    MoveArm();
+	    ros::spinOnce();
+	    rate_.sleep();
+	}
+	current_joint_angles_(0) = target_joint_angles_(0);
+	current_joint_angles_(1) = target_joint_angles_(1);
+	current_joint_angles_(2) = target_joint_angles_(2);
     MoveArm();	
 
+	in_init_ = true;
 	return true;
 }
 
@@ -210,6 +244,7 @@ bool SimpleArmController::GoToPosition()
 {
 	// interpolate on current-to-object direction	
     ROS_INFO("Go to position [%4.2lf %4.2lf %4.2lf]", object_end_point_.x, object_end_point_.y, object_end_point_.z);
+	if (in_init_) TurnShoulder();
 	bool is_ok = true;
     std::vector<double> msg;
     msg.resize(kNumJoint);
@@ -241,25 +276,30 @@ bool SimpleArmController::GoToPosition()
 	ROS_INFO("Go to position succedded.");
 	return is_ok;
 }
+void SimpleArmController::TurnShoulder()
+{
+	while(fabs(current_joint_angles_(0)) > 0.05)
+	{
+		current_joint_angles_(0) += kShoulderMoveStep;
+		MoveArm();
+		ros::spinOnce();
+		rate_.sleep();
+	}
+	in_init_ = false;
+}
 
 bool SimpleArmController::MoveBase()
 {	
 	std_msgs::Float64 msg;
 	target_height_ = std::max(std::min(object_end_point_.z - kBaseHeightDiff, kBaseHeightMax), kBaseHeightMin);
 	bool direction = target_height_ > current_height_;
-	ROS_INFO("Move base to %5.2lf. Current base height: %5.2lf. Moving %s.", target_height_, current_height_, direction ? "upward" : "downward");
-	while(fabs(current_height_ - target_height_) > 0.01)
-	{
-		current_height_ += kBaseMoveStep * (direction ? 1.0: -1.0);	
-		msg.data = current_height_;
-		base_pub_.publish(msg);
-		ROS_INFO("\033[0;35mBase moved to %5.2lf.\033[0;0m", current_height_);
-	    ros::spinOnce();
-	    rate_.sleep();
-	}
-	current_height_ = target_height_;	
-	msg.data = current_height_;
+	ROS_INFO("Move base to %5.2lf. Current base height: %5.2lf. %s.", target_height_, current_height_, direction ? "Moving upwards." : (target_height_ < current_height_ ? "Moving downwards." : "Not moving."));
+
+    msg.data = target_height_;
 	base_pub_.publish(msg);
+    ros::Duration(100*fabs(target_height_ - current_height_)+2).sleep();
+    current_height_ = target_height_;
+	ROS_INFO("\033[0;35mBase moved to %5.2lf.\033[0;0m", current_height_);
 
 	object_end_point_.z = object_end_point_.z - target_height_;
 	ROS_INFO("Move base succedded.");
@@ -268,19 +308,21 @@ bool SimpleArmController::MoveBase()
 
 void SimpleArmController::MoveArm()
 {
-	ROS_INFO("\033[0;34mPublishing angle: %5.2lf %5.2lf %5.2lf\033[0;0m", current_joint_angles_(0)*180/M_PI, current_joint_angles_(1)*180/M_PI, 
-		current_joint_angles_(2)*180/M_PI);
+	ROS_INFO("\033[0;34mPublishing angle: %5.2lf %5.2lf %5.2lf %5.2lf\033[0;0m", current_joint_angles_(0)*180/M_PI, (M_PI/2-current_joint_angles_(1))*180/M_PI, 
+		(current_joint_angles_(2))*180/M_PI, (M_PI / 2 + current_joint_angles_(1) + current_joint_angles_(2))*180/M_PI);
 	current_end_point_ = AngleToPosition(current_joint_angles_);
 	std_msgs::Float64 msg;
 	msg.data = current_joint_angles_(0);
 	shoulder_rotation_pub_.publish(msg);
-	msg.data = current_joint_angles_(1);
+	msg.data = M_PI/2 - current_joint_angles_(1);
 	shoulder_flexion_pub_.publish(msg);
-	msg.data = M_PI - current_joint_angles_(2);
+	msg.data = current_joint_angles_(2);
 	elbow_pub_.publish(msg);
-	msg.data = M_PI / 2 - current_joint_angles_(1) - current_joint_angles_(2);
-	wrist_pub_.publish(msg);
-	msg.data = in_grasp_;
+    msg.data = M_PI;
+    wrist_deviation_pub_.publish(msg);
+	msg.data = M_PI / 2 + current_joint_angles_(1) + current_joint_angles_(2);
+	wrist_extension_pub_.publish(msg);
+	msg.data = in_grasp_ ? 0.4 : 1.2;
 	hand_pub_.publish(msg);
 }
 
