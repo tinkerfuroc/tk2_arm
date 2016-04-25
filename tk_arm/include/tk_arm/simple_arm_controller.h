@@ -50,9 +50,7 @@ public:
 
     static const double kBaseHeightMax;
     static const double kBaseHeightMin;
-    static const double kBaseMoveStep;
-    static const double kBaseHeightDiff;  
-    static const double kHandLength;  
+    static const double kBaseHeightDiff;    
 
 protected:
     virtual bool PositionToAngle(const geometry_msgs::Point &target, KDL::JntArray &joint_angle);
