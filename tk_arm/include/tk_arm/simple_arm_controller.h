@@ -9,6 +9,7 @@
 #include <kdl/chain.hpp>
 #include <actionlib/server/simple_action_server.h>
 #include <tk_arm/ArmReachObjectAction.h>
+// #include <tk_arm/ArmReachTestAction.h>
 #include <tk_arm/ArmInitAction.h>
 
 namespace tinker {
@@ -41,9 +42,6 @@ public:
     static const double kDegreeInterpolation;
     static const double kShoulderMoveStep;
 
-    static const double kForwardVelocity;
-    static const double kBlindDistance;
-
     static const double kBaseHeightMax;
     static const double kBaseHeightMin;
     static const double kBaseHeightDiff;
@@ -57,10 +55,10 @@ protected:
     virtual bool ReleaseObject();
 
     virtual void MoveArm();
-    virtual bool GoToPosition();
+    virtual bool GoToPosition(bool move);
     virtual bool GoInit();
     virtual void TurnShoulder();
-    virtual bool MoveBase();
+    virtual bool MoveBase(bool move);
 
     bool HasArrivedTarget();
     bool HasArrivedObject();
@@ -99,8 +97,7 @@ protected:
     double target_height_;
 
     geometry_msgs::Point current_end_point_;
-    geometry_msgs::Point
-        target_end_point_;  // TARGET is the next midway-point for arm
+    geometry_msgs::Point target_end_point_;  // TARGET is the next midway-point for arm
     geometry_msgs::Point object_end_point_;  // OBJECT is the final goal for arm
     geometry_msgs::Point error_;
 };

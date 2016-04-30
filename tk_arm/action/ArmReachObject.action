@@ -1,6 +1,6 @@
 #Define the goal
 geometry_msgs/PointStamped pos
-int32 grasp_state
+int32 state
 ---
 # Define the result
 bool is_reached

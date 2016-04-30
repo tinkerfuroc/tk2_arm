@@ -33,11 +33,11 @@ int main(int argc, char **argv) {
             if (3 != scanf("%lf%lf%lf", &goal.pos.point.x, &goal.pos.point.y,
                            &goal.pos.point.z))
                 break;
-            printf("grasp state (bit0: grasp, bit1: force):\n");
-            if (1 != scanf("%d", &goal.grasp_state)) break;
-            while (goal.grasp_state > 3 || goal.grasp_state < 0) {
-                printf("grasp state (bit0: grasp, bit1: force):\n");
-                scanf("%d", &goal.grasp_state);
+            printf("grasp state (0: release, 1: grasp, 2,3: force, 4: test):\n");
+            if (1 != scanf("%d", &goal.state)) break;
+            while (goal.state > 4 || goal.state < 0) {
+                printf("grasp state (0: release, 1: grasp, 2,3: force, 4: test):\n");
+                scanf("%d", &goal.state);
             }
 
             goal.pos.header.stamp = ros::Time::now();
