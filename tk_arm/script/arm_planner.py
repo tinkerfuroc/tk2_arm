@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 import actionlib
 import rospy
 from tk_arm.msg._ArmReachObjectGoal import ArmReachObjectGoal
@@ -12,7 +14,7 @@ from math import fabs
 class ArmPlanAction:
     _static_frame_ids = {'map', 'odom'}
 
-    def init(self, name):
+    def __init__(self, name):
         self.action_name = name
         self._as = actionlib.SimpleActionServer(self.action_name,
                 ArmReachObjectAction,
@@ -25,21 +27,22 @@ class ArmPlanAction:
         self.chassis_move_client.wait_for_server()
         self.arm_move_client = actionlib.SimpleActionClient('arm_reach_position', ArmReachObjectAction)
         self.arm_move_client.wait_for_server()
+        rospy.loginfo('Planner start')
         self._as.start()
 
     def execute_cb(self, goal):
         goal_pos_stamped = goal.pos
         goal_point = goal_pos_stamped
-        if goal_pos_stamped.header.frame_id in ArmPlanAction._static_frame_ids:
-            goal_pos_stamped.header.stamp = rospy.Time(0)
-        while not rospy.is_shutdown():
-            try:
-                goal_point = self.trans.transfromPoint('arm_origin_link', 
-                    goal_pos_stamped)
-            except Exception as e:
-                rospy.logwarn(e.message)
+        #if goal_pos_stamped.header.frame_id in ArmPlanAction._static_frame_ids:
+        #    goal_pos_stamped.header.stamp = rospy.Time(0)
+        #while not rospy.is_shutdown():
+        #    try:
+        #        goal_point = self.trans.transfromPoint('arm_origin_link', 
+        #            goal_pos_stamped)
+        #    except Exception as e:
+        #        rospy.logwarn(e.message)
         rospy.loginfo('target %f %f %f', goal_point.point.x, 
-                goal_point.y, goal_point.point.z)
+                goal_point.point.y, goal_point.point.z)
         if (fabs(goal_point.point.y) > 0.03):
             if not self.move_y(goal_point.point.y):
                 rospy.logwarn('failed to move chassis, aborted')
@@ -47,10 +50,12 @@ class ArmPlanAction:
                 self._as.set_aborted(self._result)
                 return
             goal_point.point.y = 0
+        rospy.loginfo('arm %f %f %f', goal_point.point.x, 
+                goal_point.point.y, goal_point.point.z)
         arm_goal = goal
         arm_goal.pos = goal_point
         self.arm_move_client.send_goal(arm_goal)
-        if self.arm_move_client.wait_for_result():
+        if not self.arm_move_client.wait_for_result():
             rospy.logwarn('arm failed to reach, aborted')
             self._result.is_reached = False
             self._as.set_aborted(self._result)
