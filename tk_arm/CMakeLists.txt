@@ -206,8 +206,6 @@ include_directories(
 )
 
 set(TK2_ARM_SOURCE 
-    # ./src/base_arm_controller.cc
-    # ./src/arm_controller.cc
     ./src/simple_arm_controller.cc
 )
 

@@ -1,5 +1,5 @@
 #Define the goal
-geometry_msgs/Point pos
+geometry_msgs/PointStamped pos
 int32 grasp_state
 ---
 # Define the result
