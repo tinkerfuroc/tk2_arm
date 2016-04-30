@@ -116,7 +116,7 @@ SimpleArmController::SimpleArmController(std::string server_name_)
 
 void SimpleArmController::PositionCallback(
     const tk_arm::ArmReachObjectGoalConstPtr &new_goal) {
-    ROS_ASSERT(new_goal->state <= 4 && new_goal->state >= 0);
+    geometry_msgs::Point start_point = current_end_point_;
     if (new_goal->pos.header.frame_id == "arm_origin_link") {
         ROS_WARN("Forcing frame id to be arm_origin_link");
     }
@@ -151,6 +151,9 @@ void SimpleArmController::PositionCallback(
         if (need_grasp_ & 0x01) GraspObject();
         else ReleaseObject();
     }
+    result_.moved.x = current_end_point_.x - start_point.x;
+    result_.moved.y = current_end_point_.y - start_point.y;
+    result_.moved.z = current_end_point_.z - start_point.z;
     result_.is_reached = success;
     if (success)
     {
@@ -253,10 +256,8 @@ bool SimpleArmController::GoToPosition(bool move) {
         target_end_point_.z = current_end_point_.z + z * kMoveStep / distance;
         if (!PositionToAngle(target_end_point_, target_joint_angles_)) {
             ROS_WARN("Position to angle failed.");
-            is_ok = false;
-            break;
+            return false;
         }
-
         current_joint_angles_ = target_joint_angles_;
 
         if (move) {
@@ -327,8 +328,8 @@ void SimpleArmController::MoveArm() {
     wrist_deviation_pub_.publish(msg);
     msg.data = M_PI / 2 + current_joint_angles_(1) + current_joint_angles_(2);
     wrist_extension_pub_.publish(msg);
-    msg.data = in_grasp_ ? 0.2 : 1.2;
-    ROS_INFO("Hand angle %lf", msg.data);
+    msg.data = in_grasp_ ? -100 : 20;
+    ROS_INFO("Hand torque %lf", msg.data);
     hand_pub_.publish(msg);
 }
 
