@@ -289,7 +289,7 @@ void SimpleArmController::MoveArm() {
     current_end_point_ = AngleToPosition(current_joint_angles_);
     std_msgs::Float64 msg;
     msg.data = current_joint_angles_(0);
-    // shoulder_rotation_pub_.publish(msg);
+    shoulder_rotation_pub_.publish(msg);
     msg.data = M_PI / 2 - current_joint_angles_(1);
     shoulder_flexion_pub_.publish(msg);
     msg.data = current_joint_angles_(2);
