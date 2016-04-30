@@ -47,7 +47,7 @@ int main(int argc, char **argv) {
 
             ROS_INFO("Waiting for result...");
             bool finished_before_timeout =
-                ac.waitForResult(ros::Duration(30.0));
+                ac.waitForResult();
             if (finished_before_timeout) {
                 actionlib::SimpleClientGoalState state = ac.getState();
                 ROS_INFO("Action finished: %s", state.toString().c_str());

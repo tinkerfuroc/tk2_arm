@@ -4,7 +4,7 @@ int32 grasp_state
 ---
 # is reached or not
 bool is_reached
-# how much x, y, z the hand has really moved
+# where hand is to /arm_origin_link
 geometry_msgs/Point moved
 ---
 # Define a feedback message

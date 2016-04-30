@@ -36,7 +36,7 @@ const double SimpleArmController::kBaseHeightDiff = 0.1;
 
 const double SEG_MIN[] = {-94 / 180.0 * M_PI, -4 / 180.0 * M_PI,
                           45 / 180.0 * M_PI,
-                          -78 / 180.0 * M_PI};  // min angle pos
+                          -59 / 180.0 * M_PI};  // min angle pos
 
 const double SEG_MAX[] = {32 / 180.0 * M_PI, 93 / 180.0 * M_PI,
                           150 / 180.0 * M_PI,
@@ -137,7 +137,8 @@ void SimpleArmController::PositionCallback(
             success = false;
             ROS_INFO("Action Aborted.");
         }
-        ROS_INFO("Go to position succeded.");
+        else
+            ROS_INFO("Go to position succeded.");
     }
     if (success || (need_grasp_ & 0x02)) {
         need_grasp_ = need_grasp_ & 0x01;
@@ -145,9 +146,7 @@ void SimpleArmController::PositionCallback(
         if (need_grasp_) GraspObject();
         else ReleaseObject();
     }
-    result_.moved.x = current_end_point_.x - start_point.x;
-    result_.moved.y = current_end_point_.y - start_point.y;
-    result_.moved.z = current_end_point_.z - start_point.z;
+    result_.moved = current_end_point_;
     result_.is_reached = success;
     if (success)
         as_.setSucceeded(result_);

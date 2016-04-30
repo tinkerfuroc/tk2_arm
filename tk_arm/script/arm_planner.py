@@ -55,6 +55,7 @@ class ArmPlanAction:
                 goal_point.point.y, goal_point.point.z)
         arm_goal = goal
         arm_goal.pos = goal_point
+        arm_goal.grasp_state &= 0x01 # do not force grasp in case of failure
         self.arm_move_client.send_goal(arm_goal)
         self.arm_move_client.wait_for_result()
         arm_result = self.arm_move_client.get_result()
@@ -66,12 +67,15 @@ class ArmPlanAction:
         self._result.is_reached = arm_result.is_reached
         # finally move chassis over x
         if not arm_result.is_reached:
+            rospy.loginfo('chassis move x %f', goal_point.point.x)
             chassis_result = self.move_chassis(goal_point.point.x, 0, 0)
             goal_point.point.x -= chassis_result.moved_distance.x
             self._result.is_reached = chassis_result.success
-        self._result.moved.x = origin_goal.x - goal_point.point.x
-        self._result.moved.y = origin_goal.y - goal_point.point.y
-        self._result.moved.z = origin_goal.z - goal_point.point.z
+            arm_goal = goal
+            arm_goal.pos.point = arm_result.moved
+            self.arm_move_client.send_goal(arm_goal)
+            self.arm_move_client.wait_for_result()
+        self._result.moved = arm_result.moved
         if self._result.is_reached:
             self._as.set_succeeded(self._result)
         else:
@@ -83,6 +87,7 @@ class ArmPlanAction:
         goal.target.y = y
         goal.target.theta = theta
         self.chassis_move_client.send_goal(goal)
+        self.chassis_move_client.wait_for_result()
         return self.chassis_move_client.get_result()
 
 
