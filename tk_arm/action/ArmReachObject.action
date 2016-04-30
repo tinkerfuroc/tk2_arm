@@ -2,8 +2,10 @@
 geometry_msgs/PointStamped pos
 int32 grasp_state
 ---
-# Define the result
+# is reached or not
 bool is_reached
+# how much x, y, z the hand has really moved
+geometry_msgs/Point moved
 ---
 # Define a feedback message
 float32 percent_complete
