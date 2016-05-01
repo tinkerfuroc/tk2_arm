@@ -1,0 +1,4 @@
+<launch>
+    <node name="arm_controller" pkg="tk_arm" type="arm_controller"/>
+    <node name="arm_planner" pkg="tk_arm" type="arm_planner.py" output="screen"/>
+</launch>
