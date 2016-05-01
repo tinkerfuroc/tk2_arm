@@ -45,6 +45,7 @@ public:
     static const double kBaseHeightMax;
     static const double kBaseHeightMin;
     static const double kBaseHeightDiff;
+    static const double kHandLength;
 
 protected:
     virtual bool PositionToAngle(const geometry_msgs::Point &target,

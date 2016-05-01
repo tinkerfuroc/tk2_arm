@@ -30,6 +30,7 @@ const double SimpleArmController::kShoulderMoveStep = 0.05;
 const double SimpleArmController::kBaseHeightMin = 0.0;
 const double SimpleArmController::kBaseHeightMax = 0.3;
 const double SimpleArmController::kBaseHeightDiff = 0.1;
+const double SimpleArmController::kHandLength = 0.1;
 
 const double SEG_MIN[] = {-94 / 180.0 * M_PI, -4 / 180.0 * M_PI,
                           45 / 180.0 * M_PI,
@@ -123,8 +124,14 @@ void SimpleArmController::PositionCallback(
     geometry_msgs::Point origin_current_end_point_ = current_end_point_;
     KDL::JntArray origin_current_joint_angles_ = current_joint_angles_;
 
-    object_end_point_ = new_goal->pos.point;
-    object_end_point_ = new_goal->pos.point;
+    double x = new_goal->pos.point.x;
+    double y = new_goal->pos.point.y;
+    double z = new_goal->pos.point.z;
+    double xy_dist = sqrt(x * x + y * y);
+    object_end_point_.x = x - kHandLength * x / xy_dist;
+    object_end_point_.y = y - kHandLength * y / xy_dist;
+    object_end_point_.z = z;
+
     bool test_state = new_goal->state & 0x04;
     need_grasp_ = new_goal->state & 0x03;
     bool success = true;
