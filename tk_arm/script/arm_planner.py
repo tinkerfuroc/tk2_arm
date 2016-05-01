@@ -33,14 +33,17 @@ class ArmPlanAction:
     def execute_cb(self, goal):
         goal_pos_stamped = goal.pos
         goal_point = goal_pos_stamped
-        #if goal_pos_stamped.header.frame_id in ArmPlanAction._static_frame_ids:
-        #    goal_pos_stamped.header.stamp = rospy.Time(0)
-        #while not rospy.is_shutdown():
-        #    try:
-        #        goal_point = self.trans.transfromPoint('arm_origin_link', 
-        #            goal_pos_stamped)
-        #    except Exception as e:
-        #        rospy.logwarn(e.message)
+        rospy.loginfo('target raw %f %f %f', goal_point.point.x, 
+                goal_point.point.y, goal_point.point.z)
+        if goal_pos_stamped.header.frame_id in ArmPlanAction._static_frame_ids:
+            goal_pos_stamped.header.stamp = rospy.Time(0)
+        while not rospy.is_shutdown():
+            try:
+                goal_point = self.trans.transformPoint('arm_origin_link', 
+                    goal_pos_stamped)
+                break
+            except Exception as e:
+                rospy.logwarn(e.message)
         origin_goal = goal_point.point
         rospy.loginfo('target %f %f %f', goal_point.point.x, 
                 goal_point.point.y, goal_point.point.z)
