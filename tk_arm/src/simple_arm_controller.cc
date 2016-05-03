@@ -34,7 +34,7 @@ const double SimpleArmController::kHandLength = 0.1;
 
 const double SEG_MIN[] = {-94 / 180.0 * M_PI, -4 / 180.0 * M_PI,
                           45 / 180.0 * M_PI,
-                          -59 / 180.0 * M_PI};  // min angle pos
+                          -78 / 180.0 * M_PI};  // min angle pos
 
 const double SEG_MAX[] = {32 / 180.0 * M_PI, 93 / 180.0 * M_PI,
                           150 / 180.0 * M_PI,
@@ -87,11 +87,11 @@ SimpleArmController::SimpleArmController(std::string server_name_)
     arm_info_.segments[1] = Segment(
         Joint(Joint::RotY),
         Frame(Vector(0.0, 0.0,
-                     0.40 * double(SimpleArmController::kLengthFactor))));
+                     0.41 * double(SimpleArmController::kLengthFactor))));
     arm_info_.segments[2] = Segment(
         Joint(Joint::RotY),
         Frame(Vector(0.0, 0.0,
-                     0.40 * double(SimpleArmController::kLengthFactor))));
+                     0.41 * double(SimpleArmController::kLengthFactor))));
 
     // build the arm model: chain_
     for (int i = 0; i < kNumSegment; i++)
@@ -119,6 +119,17 @@ void SimpleArmController::PositionCallback(
     geometry_msgs::Point start_point = current_end_point_;
     if (new_goal->pos.header.frame_id == "arm_origin_link") {
         ROS_WARN("Forcing frame id to be arm_origin_link");
+    }
+
+    need_grasp_ = new_goal->state & 0x03;
+
+    if (need_grasp_ & 0x02) {
+        if (need_grasp_ & 0x01) GraspObject();
+        else ReleaseObject();
+        result_.moved = current_end_point_;
+        result_.is_reached = true;
+        as_.setSucceeded(result_);
+        return;
     }
 
     geometry_msgs::Point origin_current_end_point_ = current_end_point_;
@@ -238,6 +249,9 @@ bool SimpleArmController::GoToPosition(bool move) {
     bool is_ok = true;
     std::vector<double> msg;
     msg.resize(kNumJoint);
+    target_height_ = std::max(
+        std::min(object_end_point_.z - kBaseHeightDiff, kBaseHeightMax),
+        kBaseHeightMin);
     MoveBase(move);
     ROS_INFO(
         "Go to position [%4.2lf %4.2lf %4.2lf] from [%4.2lf %4.2lf %4.2lf]...",
@@ -283,9 +297,6 @@ void SimpleArmController::TurnShoulder() {
 
 bool SimpleArmController::MoveBase(bool move) {
     std_msgs::Float64 msg;
-    target_height_ = std::max(
-        std::min(object_end_point_.z - kBaseHeightDiff, kBaseHeightMax),
-        kBaseHeightMin);
     bool direction = target_height_ > current_height_;
     ROS_INFO("Move base to %4.2lf. Current base height: %4.2lf. %s.",
              target_height_, current_height_,
@@ -297,7 +308,7 @@ bool SimpleArmController::MoveBase(bool move) {
     {
         msg.data = target_height_;
         base_pub_.publish(msg);
-        ros::Duration(100 * fabs(target_height_ - current_height_) + 2).sleep();
+        ros::Duration(50 * fabs(target_height_ - current_height_) + 2).sleep();
         current_height_ = target_height_;
         ROS_INFO("\033[0;35mBase moved to %4.2lf.\033[0;0m", current_height_);
     }
@@ -324,7 +335,7 @@ void SimpleArmController::MoveArm() {
     elbow_pub_.publish(msg);
     msg.data = M_PI;
     wrist_deviation_pub_.publish(msg);
-    msg.data = M_PI / 2 + current_joint_angles_(1) + current_joint_angles_(2);
+    msg.data = M_PI / 2 + current_joint_angles_(1) + current_joint_angles_(2) + 0.12;
     wrist_extension_pub_.publish(msg);
     msg.data = in_grasp_ ? -100 : 20;
     ROS_INFO("Hand torque %lf", msg.data);
