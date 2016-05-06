@@ -3,10 +3,7 @@
 
 #include <ros/ros.h>
 #include <vector>
-#include <kdl/frames_io.hpp>
-#include <kdl/segment.hpp>
-#include <kdl/joint.hpp>
-#include <kdl/chain.hpp>
+#include <tk_arm/arm_ik.h>
 #include <actionlib/server/simple_action_server.h>
 #include <tk_arm/ArmReachObjectAction.h>
 // #include <tk_arm/ArmReachTestAction.h>
@@ -14,13 +11,6 @@
 
 namespace tinker {
 namespace arm {
-struct ArmInfo {
-    std::vector<double> min_angles;
-    std::vector<double> max_angles;
-    std::vector<double> init_angles;
-    std::vector<KDL::Segment> segments;
-};
-
 class SimpleArmController {
 public:
     SimpleArmController(std::string server_name_);
@@ -31,26 +21,7 @@ public:
     // callback function for GoInit actionlib server
     void InitCallback(const tk_arm::ArmInitGoalConstPtr &new_goal);
 
-    static const int kNumJoint;
-    static const int kNumSegment;
-    static const int kErrorRetry;
-    static const int kGraspWaitTime;
-
-    static const double kLengthFactor;
-    static const double kAngleFactor;
-    static const double kMoveStep;
-    static const double kDegreeInterpolation;
-    static const double kShoulderMoveStep;
-
-    static const double kBaseHeightMax;
-    static const double kBaseHeightMin;
-    static const double kBaseHeightDiff;
-    static const double kHandLength;
-
 protected:
-    virtual bool PositionToAngle(const geometry_msgs::Point &target,
-                                 KDL::JntArray &joint_angle);
-    virtual geometry_msgs::Point AngleToPosition(const KDL::JntArray angle);
 
     virtual bool GraspObject();
     virtual bool ReleaseObject();
@@ -63,12 +34,6 @@ protected:
 
     bool HasArrivedTarget();
     bool HasArrivedObject();
-
-    void WarnKDLSolve(int retval);
-    bool CheckAngleLegal(const KDL::JntArray &joint_angle);
-
-    ArmInfo arm_info_;  // arm parameters
-    KDL::Chain chain_;  // the arm
 
     // publishers for PublishCurrentPose()
     ros::NodeHandle nh_;
@@ -94,6 +59,7 @@ protected:
     // arm states
     KDL::JntArray current_joint_angles_;
     KDL::JntArray target_joint_angles_;
+    KDL::JntArray initial_joint_angles_;
     double current_height_;
     double target_height_;
 
@@ -101,6 +67,12 @@ protected:
     geometry_msgs::Point target_end_point_;  // TARGET is the next midway-point for arm
     geometry_msgs::Point object_end_point_;  // OBJECT is the final goal for arm
     geometry_msgs::Point error_;
+private:
+    ArmIK arm_ik_;
+    static const int kGraspWaitTime;
+    static const double kMoveStep;
+    static const double kDegreeInterpolation;
+    static const double kShoulderMoveStep;
 };
 }
 }

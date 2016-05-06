@@ -10,7 +10,7 @@ using namespace tinker::arm;
 
 int main(int argc, char *argv[])
 {
-	ros::init(argc, argv, "tk_arm");
+	ros::init(argc, argv, "tk_arm_control");
 
 	SimpleArmController arm_controller(ros::this_node::getName());
 	ros::spin();

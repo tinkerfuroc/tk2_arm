@@ -202,26 +202,30 @@ include_directories(
     ./include 
     ${catkin_INCLUDE_DIRS}
     ${EIGEN3_INCLUDE_DIR}
+    ${Boost_INCLUDE_DIR}
     /usr/local/include
 )
 
 set(TK2_ARM_SOURCE 
     ./src/simple_arm_controller.cc
+    ./src/arm_ik.cpp
+    ./src/base_arm_planner.cpp
+    ./src/base_astar_planner.cpp
 )
 
 link_directories(/usr/local/lib)
 
-# add_executable(IKsolver src/arm_IKsolver.cpp)
 add_executable(arm_controller src/arm_control_node.cpp ${TK2_ARM_SOURCE})
-# target_link_libraries(IKsolver ${catkin_LIBRARIES} orocos-kdl)
 target_link_libraries(arm_controller ${catkin_LIBRARIES} orocos-kdl)
-# add_dependencies(IKsolver tk_arm_generate_messages_cpp)
 add_dependencies(arm_controller tk_arm_generate_messages_cpp)
 
 add_executable(actionlib_test src/actionlib_test.cpp ${TK2_ARM_SOURCE})
 target_link_libraries(actionlib_test ${catkin_LIBRARIES} orocos-kdl)
 add_dependencies(actionlib_test tk_arm_generate_messages_cpp)
 
+add_executable(plan_test src/test_plan.cpp ${TK2_ARM_SOURCE})
+target_link_libraries(plan_test ${catkin_LIBRARIES} orocos-kdl)
+add_dependencies(plan_test tk_arm_generate_messages_cpp)
 # add_executable(set_arm src/set_arm.cpp)
 # target_link_libraries(set_arm ${catkin_LIBRARIES} orocos-kdl)
 # add_dependencies(set_arm tk_arm_generate_messages_cpp)
