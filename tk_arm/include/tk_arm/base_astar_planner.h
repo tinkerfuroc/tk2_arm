@@ -22,8 +22,8 @@ protected:
         const std::vector<std::vector<std::vector<bool> > > &closed_grids);
     // Do not return the whole moved score evaluation but the increment of moved
     // score
-    virtual int StateIncrementEval(const ArmStatePtr state);
-    virtual int StateScorePredict(const ArmStatePtr state, 
+    virtual double StateIncrementEval(const ArmStatePtr state);
+    virtual double StateScorePredict(const ArmStatePtr state, 
                                   const GridPoint &target_grid);
 
 protected:
@@ -33,6 +33,7 @@ protected:
 private:
     double distance_factor_;
     double regularity_factor_;
+    double z_factor_;
     GridPoint target_grid_;
     int seq_;
 };

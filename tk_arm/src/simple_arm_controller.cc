@@ -88,10 +88,6 @@ void SimpleArmController::PositionCallback(
     double x = new_goal->pos.point.x;
     double y = new_goal->pos.point.y;
     double z = new_goal->pos.point.z;
-    // double xy_dist = sqrt(x * x + y * y);
-    // object_end_point_.x = x - kHandLength * x / xy_dist;
-    // object_end_point_.y = y - kHandLength * y / xy_dist;
-    // object_end_point_.z = z;
     object_end_point_.x = x;
     object_end_point_.y = y;
     object_end_point_.z = z;

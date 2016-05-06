@@ -67,7 +67,9 @@ bool ArmIK::PositionToAngle(const geometry_msgs::Point &target,
                             KDL::JntArray &joint_angle) {
     KDL::JntArray initial_joint_angles_(ArmIK::kNumJoint - 1);
     initial_joint_angles_.data.setRandom();
-    initial_joint_angles_.data *= M_PI;
+    for (int i = 0; i < 3; i ++) {
+        initial_joint_angles_.data(i) = SEG_INIT[i];
+    }
     return PositionToAngle(target, initial_joint_angles_, joint_angle,
                            kErrorRetry);
 }
@@ -76,8 +78,9 @@ bool ArmIK::PositionToAngle(const geometry_msgs::Point &target,
                             KDL::JntArray &joint_angle,
                             int retry_time) {
     KDL::JntArray initial_joint_angles_(ArmIK::kNumJoint - 1);
-    initial_joint_angles_.data.setRandom();
-    initial_joint_angles_.data *= M_PI;
+    for (int i = 0; i < 3; i ++) {
+        initial_joint_angles_.data(i) = SEG_INIT[i];
+    }
     return PositionToAngle(target, initial_joint_angles_, joint_angle,
                            retry_time);
 }
@@ -85,6 +88,14 @@ bool ArmIK::PositionToAngle(const geometry_msgs::Point &target,
 bool ArmIK::PositionToAngle(const geometry_msgs::Point &target,
                             const KDL::JntArray &seed_angle,
                             KDL::JntArray &joint_angle, int retry_time) {
+    geometry_msgs::Point arm_target;
+    double x = target.x;
+    double y = target.y;
+    double xy_dist = sqrt(x * x + y * y);
+    arm_target.x = x - kHandLength * x / xy_dist;
+    arm_target.y = y - kHandLength * y / xy_dist;
+    arm_target.z = target.z;
+
     Eigen::Matrix<double, 2 * (kNumJoint - 1), 1> constraint;
     for (int i = 0; i < kNumJoint - 1; i++) {
         constraint(i) = 1;
@@ -94,9 +105,9 @@ bool ArmIK::PositionToAngle(const geometry_msgs::Point &target,
     KDL::JntArray initial_joint_angles_ = seed_angle;
     KDL::JntArray new_joint_angles(kNumJoint - 1);
     int retval = -1;
-    KDL::Frame pos_goal(KDL::Vector(target.x * kLengthFactor,
-                                    target.y * kLengthFactor,
-                                    target.z * kLengthFactor));
+    KDL::Frame pos_goal(KDL::Vector(arm_target.x * kLengthFactor,
+                                    arm_target.y * kLengthFactor,
+                                    arm_target.z * kLengthFactor));
     for (int i = 0; i < retry_time; i++) {
         retval =
             solver.CartToJnt(initial_joint_angles_, pos_goal, new_joint_angles);
@@ -129,13 +140,11 @@ bool ArmIK::CheckAngleLegal(const KDL::JntArray &joint_angle) {
     for (int i = 0; i < kNumJoint - 1; i++) {
         if (joint_angle(i) > arm_info_.max_angles[i] ||
             joint_angle(i) < arm_info_.min_angles[i]) {
-            //ROS_WARN("Angle out of bound for joint %d", i);
             is_legal = false;
         }
     }
     double angle3 = M_PI / 2 - joint_angle(2) - joint_angle(1);
     if (angle3 > arm_info_.max_angles[3] || angle3 < arm_info_.min_angles[3]) {
-        //ROS_WARN("Angle out of bound for joint 3");
         is_legal = false;
     }
     return is_legal;

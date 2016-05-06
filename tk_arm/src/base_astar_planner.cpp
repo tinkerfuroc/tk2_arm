@@ -4,6 +4,7 @@
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
 #include <boost/foreach.hpp>
+#include <cmath>
 
 using std::set;
 using boost::bind;
@@ -15,8 +16,9 @@ namespace tinker {
 namespace arm {
 
 BaseAStarPlanner::BaseAStarPlanner() : seq_(0) {
-    private_nh_.param("distance_factor", distance_factor_, 1.);
-    private_nh_.param("regularity_factor", regularity_factor_, 10.);
+    private_nh_.param("distance_factor", distance_factor_, 0.7);
+    private_nh_.param("regularity_factor", regularity_factor_, 0.05);
+    private_nh_.param("z_factor", z_factor_, 0.3);
 }
 
 nav_msgs::Path BaseAStarPlanner::GetPath(
@@ -27,15 +29,25 @@ nav_msgs::Path BaseAStarPlanner::GetPath(
     set<ArmStatePtr, function<bool(const ArmStatePtr &, const ArmStatePtr &)> >
         open_states(bind(&BaseAStarPlanner::CompareState, this, _1, _2));
     GridPoint start_grid = ToGrid(start_point);
+    ROS_INFO("Start Grid at %d %d %d", start_grid.x, start_grid.y, start_grid.z);
+    ROS_INFO("Start at %f %f %f", start_point.x, start_point.y, start_point.z);
+    ROS_INFO("Start at %f %f %f", target_point.x, target_point.y, target_point.z);
     target_grid_ = ToGrid(target_point);
     if (target_grid_.z < min_possible_z_)
         target_grid_.z = min_possible_z_;
     if (target_grid_.z > max_possible_z_)
         target_grid_.z = max_possible_z_;
-    if (Invalid(start_grid)) return nav_msgs::Path();
+    ROS_INFO("Target Grid at %d %d %d", target_grid_.x, target_grid_.y, target_grid_.z);
+    if (Invalid(start_grid)) {
+        ROS_WARN("BaseAStarPlanner: Start grid not valid");
+        return nav_msgs::Path();
+    }
     open_states.insert(ArmStatePtr(new ArmState(start_grid, ArmStatePtr())));
     while (true) {
-        if (open_states.empty()) return nav_msgs::Path();
+        if (open_states.empty()) {
+            ROS_WARN("BaseAStarPlanner: Failed to make plan");
+            return nav_msgs::Path();
+        }
         ArmStatePtr now_state = *open_states.begin();
         if (HasReachedTarget(now_state, target_grid_)) {
             nav_msgs::Path path;
@@ -98,7 +110,7 @@ std::vector<ArmStatePtr> BaseAStarPlanner::GetNeighbours(
                     GridPoint new_grid = {.x = x + i, .y = y + j, .z = z + k};
                     ArmStatePtr new_state =
                         ArmStatePtr(new ArmState(new_grid, now_state));
-                    new_state->moved_score += StateIncrementEval(new_state);
+                    new_state->moved_score = now_state->moved_score + StateIncrementEval(new_state);
                     neighbours.push_back(new_state);
                 }
             }
@@ -107,7 +119,7 @@ std::vector<ArmStatePtr> BaseAStarPlanner::GetNeighbours(
     return neighbours;
 }
 
-int BaseAStarPlanner::StateIncrementEval(const ArmStatePtr state) {
+double BaseAStarPlanner::StateIncrementEval(const ArmStatePtr state) {
     ArmStatePtr prev_state = state->prev;
     double increment = 0;
     if (!prev_state) return increment;
@@ -125,9 +137,10 @@ int BaseAStarPlanner::StateIncrementEval(const ArmStatePtr state) {
     return increment;
 }
 
-int BaseAStarPlanner::StateScorePredict(const ArmStatePtr state,
+double BaseAStarPlanner::StateScorePredict(const ArmStatePtr state,
                                         const GridPoint &target_grid) {
-    return distance_factor_ * Distance(state->point, target_grid);
+    return distance_factor_ * Distance(state->point, target_grid)
+        + z_factor_ * fabs(double(state->point.z - target_grid.z));
 }
 
 bool BaseAStarPlanner::CompareState(const ArmStatePtr &lhs, const ArmStatePtr &rhs) {
