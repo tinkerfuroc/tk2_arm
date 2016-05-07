@@ -1,7 +1,8 @@
 #include <ros/ros.h>
 #include <tk_arm/ArmReachObjectAction.h>
 #include <actionlib/server/simple_action_server.h>
-#include <tk_arm/simple_arm_controller.h>
+#include <tk_arm/arm_controller.h>
+#include <tk_arm/hand_controller.h>
 #include <cmath>
 #include <cstdio>
 
@@ -12,7 +13,8 @@ int main(int argc, char *argv[])
 {
 	ros::init(argc, argv, "tk_arm_control");
 
-	SimpleArmController arm_controller(ros::this_node::getName());
+	ArmController arm_controller(ros::this_node::getName());
+	HandController hand_controller(ros::this_node::getName());
 	ros::spin();
 	
 	return 0;

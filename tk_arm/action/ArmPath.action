@@ -1,0 +1,9 @@
+#Define the goal
+nav_msgs/Path path
+---
+# Define the result
+bool is_reached
+geometry_msgs/Point moved
+---
+# Define a feedback message
+geometry_msgs/Point current_pos

@@ -17,7 +17,7 @@ BaseArmPlanner::BaseArmPlanner() : private_nh_("~") {
     private_nh_.param("z_max", grid_z_max_, 1.5);
     private_nh_.param("grid_size", grid_size_, 0.02);
     private_nh_.param("map_filename_", map_filename_,
-                      string("/home/shs/arm.map"));
+                      string("/home/marcus/arm.map"));
     ROS_ASSERT(grid_x_max_ > grid_x_min_);
     ROS_ASSERT(grid_y_max_ > grid_y_min_);
     ROS_ASSERT(grid_z_max_ > grid_z_min_);

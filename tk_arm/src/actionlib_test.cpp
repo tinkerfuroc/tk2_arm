@@ -8,7 +8,7 @@ int main(int argc, char **argv) {
     ros::init(argc, argv, "test_reach_for_point");
     // clients for GoToPoint and GoToInit action
     actionlib::SimpleActionClient<tk_arm::ArmReachObjectAction> ac(
-        "arm_planner", true);
+        "arm_reach_position", true);
     actionlib::SimpleActionClient<tk_arm::ArmInitAction> ac1("arm_reset", true);
 
     // start the clients
@@ -33,10 +33,10 @@ int main(int argc, char **argv) {
             if (3 != scanf("%lf%lf%lf", &goal.pos.point.x, &goal.pos.point.y,
                            &goal.pos.point.z))
                 break;
-            printf("grasp state (0: release, 1: grasp, 2,3: force, 4: test):\n");
+            printf("grasp state (0-3: no use, 4: test):\n");
             if (1 != scanf("%d", &goal.state)) break;
             while (goal.state > 4 || goal.state < 0) {
-                printf("grasp state (0: release, 1: grasp, 2,3: force, 4: test):\n");
+                printf("grasp state (0-3: no use, 4: test):\n");
                 scanf("%d", &goal.state);
             }
 
@@ -56,9 +56,7 @@ int main(int argc, char **argv) {
         }
         // client for GoToInit
         else if (a == 1) {
-            // the goal is of no use now
-            printf("state of the goal:\n");
-            if (1 != scanf("%d", &goal1.state)) break;
+            goal1.state = 1;
 
             ROS_INFO("Sending goal...");
             ac1.sendGoal(goal1);

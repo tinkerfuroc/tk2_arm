@@ -132,6 +132,11 @@ geometry_msgs::Point ArmIK::AngleToPosition(const KDL::JntArray angle) {
     end_point.x = pos.p.x() / double(kLengthFactor);
     end_point.y = pos.p.y() / double(kLengthFactor);
     end_point.z = pos.p.z() / double(kLengthFactor);
+    double x = end_point.x;
+    double y = end_point.y;
+    double xy_dist = sqrt(x * x + y * y);
+    end_point.x = x + kHandLength * x / xy_dist;
+    end_point.y = y + kHandLength * y / xy_dist;
     return end_point;
 }
 

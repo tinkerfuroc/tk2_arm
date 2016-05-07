@@ -1,31 +1,28 @@
-#ifndef __TINKER_SIMPLE_ARM_CONTROLLER_H__
-#define __TINKER_SIMPLE_ARM_CONTROLLER_H__
+#ifndef __TINKER_ARM_CONTROLLER_H__
+#define __TINKER_ARM_CONTROLLER_H__
 
 #include <ros/ros.h>
 #include <vector>
 #include <tk_arm/arm_ik.h>
 #include <actionlib/server/simple_action_server.h>
 #include <tk_arm/ArmReachObjectAction.h>
-// #include <tk_arm/ArmReachTestAction.h>
 #include <tk_arm/ArmInitAction.h>
+#include <tk_arm/ArmPathAction.h>
 
 namespace tinker {
 namespace arm {
-class SimpleArmController {
+class ArmController {
 public:
-    SimpleArmController(std::string server_name_);
+    ArmController(std::string server_name_);
 
     // callback function for GoToPosition actionlib server
     void PositionCallback(const tk_arm::ArmReachObjectGoalConstPtr &goal);
 
     // callback function for GoInit actionlib server
     void InitCallback(const tk_arm::ArmInitGoalConstPtr &new_goal);
+    void PathCallback(const tk_arm::ArmPathGoalConstPtr &new_goal);
 
 protected:
-
-    virtual bool GraspObject();
-    virtual bool ReleaseObject();
-
     virtual void MoveArm();
     virtual bool GoToPosition(bool move);
     virtual bool GoInit();
@@ -44,16 +41,15 @@ protected:
     ros::Publisher elbow_pub_;
     ros::Publisher wrist_deviation_pub_;
     ros::Publisher wrist_extension_pub_;
-    ros::Publisher hand_pub_;
 
     // actionlib servers
     actionlib::SimpleActionServer<tk_arm::ArmReachObjectAction> as_;
     actionlib::SimpleActionServer<tk_arm::ArmInitAction> as_init_;
+    actionlib::SimpleActionServer<tk_arm::ArmPathAction> as_path_;
     tk_arm::ArmReachObjectResult result_;
     tk_arm::ArmInitResult result_init_;
+    tk_arm::ArmPathResult result_path_;
 
-    int need_grasp_;  // 1 to grasp, 2 to release, 0 to do nothing
-    bool in_grasp_;
     bool in_init_;
 
     // arm states
