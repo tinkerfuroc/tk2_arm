@@ -9,8 +9,7 @@
 using namespace tinker::arm;
 
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
 	ros::init(argc, argv, "tk_arm_control");
 
 	ArmController arm_controller(ros::this_node::getName());

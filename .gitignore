@@ -44,3 +44,5 @@ qtcreator-*
 # Catkin custom files
 CATKIN_IGNORE
 .ycm_extra_conf.py
+tk_arm/map/*
+*.map

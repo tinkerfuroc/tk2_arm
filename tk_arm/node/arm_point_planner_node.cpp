@@ -13,8 +13,7 @@ tk_arm::ArmPathGoal goal;
 
 namespace tinker{
 namespace arm{
-class ArmPointServer
-{
+class ArmPointServer {
 protected:
     ros::NodeHandle nh_;
     actionlib::SimpleActionServer<tk_arm::ArmReachObjectAction> as_;
@@ -26,8 +25,7 @@ protected:
 public:
     ArmPointServer():
         nh_(), as_(nh_, "arm_point", boost::bind(&ArmPointServer::PointCallback, this, _1), false),
-        ac_("arm_path", true)
-    {
+        ac_("arm_path", true) {
         p0.x = 0.38;
         p0.y = -0.02;
         p0.z = 0.15;
@@ -37,25 +35,21 @@ public:
         ROS_INFO("Action server started.");
     }
 
-    ~ArmPointServer()
-    {
+    ~ArmPointServer() {
     }
-    void PointCallback(const tk_arm::ArmReachObjectGoalConstPtr &new_goal)
-    {
+
+    void PointCallback(const tk_arm::ArmReachObjectGoalConstPtr &new_goal) {
         p1 = new_goal->pos.point;
         goal.path = astar_planner.GetPath(p0, p1, success);
         ac_.sendGoal(goal);
-        
         ROS_INFO("Waiting for result...");
         bool finished_before_timeout = ac_.waitForResult();
-        if (finished_before_timeout)
-        {
+        if (finished_before_timeout) {
             actionlib::SimpleClientGoalState state = ac_.getState();
             ROS_INFO("Action finished: %s", state.toString().c_str());
             p0 = p1;
         }
-        else
-        {
+        else {
             ROS_INFO("Action did not finish before the time out.");
             p0 = ac_.getResult()->moved;
         }
@@ -64,9 +58,8 @@ public:
 }
 }
 
-int main(int argc, char *argv[])
-{
-    ros::init(argc, argv, "test_plan");
+int main(int argc, char *argv[]) {
+    ros::init(argc, argv, "arm_point_planner");
     ArmPointServer as;
     ros::spin();
     return 0;

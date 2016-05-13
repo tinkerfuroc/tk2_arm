@@ -209,8 +209,8 @@ include_directories(
 )
 
 set(TK2_ARM_SOURCE 
-    ./src/arm_controller.cc
-    ./src/hand_controller.cc
+    ./src/arm_controller.cpp
+    ./src/hand_controller.cpp
     ./src/arm_ik.cpp
     ./src/base_arm_planner.cpp
     ./src/base_astar_planner.cpp
@@ -218,17 +218,17 @@ set(TK2_ARM_SOURCE
 
 link_directories(/usr/local/lib)
 
-add_executable(arm_controller src/arm_control_node.cpp ${TK2_ARM_SOURCE})
+add_executable(arm_controller node/arm_control_node.cpp ${TK2_ARM_SOURCE})
 target_link_libraries(arm_controller ${catkin_LIBRARIES} orocos-kdl)
 add_dependencies(arm_controller tk_arm_generate_messages_cpp)
 
-add_executable(actionlib_test src/actionlib_test.cpp ${TK2_ARM_SOURCE})
+add_executable(actionlib_test node/actionlib_test.cpp ${TK2_ARM_SOURCE})
 target_link_libraries(actionlib_test ${catkin_LIBRARIES} orocos-kdl)
 add_dependencies(actionlib_test tk_arm_generate_messages_cpp)
 
-add_executable(plan_test src/test_plan.cpp ${TK2_ARM_SOURCE})
-target_link_libraries(plan_test ${catkin_LIBRARIES} orocos-kdl)
-add_dependencies(plan_test tk_arm_generate_messages_cpp)
+add_executable(arm_point_planner node/arm_point_planner_node.cpp ${TK2_ARM_SOURCE})
+target_link_libraries(arm_point_planner ${catkin_LIBRARIES} orocos-kdl)
+add_dependencies(arm_point_planner tk_arm_generate_messages_cpp)
 # add_executable(set_arm src/set_arm.cpp)
 # target_link_libraries(set_arm ${catkin_LIBRARIES} orocos-kdl)
 # add_dependencies(set_arm tk_arm_generate_messages_cpp)
