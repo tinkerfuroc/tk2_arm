@@ -28,7 +28,8 @@ protected:
 
 protected:
     virtual bool HasReachedTarget(const ArmStatePtr state,
-                                  const GridPoint &target_grid);
+                                  const GridPoint &target_grid,
+                                  int steps);
 
 private:
     double distance_factor_;

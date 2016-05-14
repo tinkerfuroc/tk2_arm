@@ -92,9 +92,9 @@ geometry_msgs::Point BaseArmPlanner::ToPoint(const GridPoint &grid) {
 
 GridPoint BaseArmPlanner::ToGrid(const geometry_msgs::Point &point) {
     GridPoint grid;
-    grid.x = (point.x - grid_x_min_) / grid_size_;
-    grid.y = (point.y - grid_y_min_) / grid_size_;
-    grid.z = (point.z - grid_z_min_) / grid_size_;
+    grid.x = round((point.x - grid_x_min_) / grid_size_);
+    grid.y = round((point.y - grid_y_min_) / grid_size_);
+    grid.z = round((point.z - grid_z_min_) / grid_size_);
     return grid;
 }
 

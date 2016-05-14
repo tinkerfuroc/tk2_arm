@@ -8,8 +8,6 @@
 
 using namespace tinker::arm;
 
-bool success;
-tk_arm::ArmPathGoal goal;
 
 namespace tinker{
 namespace arm{
@@ -27,8 +25,8 @@ public:
         nh_(), as_(nh_, "arm_point", boost::bind(&ArmPointServer::PointCallback, this, _1), false),
         ac_("arm_path", true) {
         p0.x = 0.38;
-        p0.y = -0.02;
-        p0.z = 0.15;
+        p0.y = 0.;
+        p0.z = 0.;
         ROS_INFO("Waiting for action server to start.");
         as_.start();
         ac_.waitForServer();
@@ -39,20 +37,35 @@ public:
     }
 
     void PointCallback(const tk_arm::ArmReachObjectGoalConstPtr &new_goal) {
+        bool success;
+        bool need_y_move;
+        tk_arm::ArmPathGoal goal;
         p1 = new_goal->pos.point;
+        if (p1.y != 0)
+            need_y_move = true;
+        p1.y = 0;
         goal.path = astar_planner.GetPath(p0, p1, success);
+        success = success && (!need_y_move);
+        p0 = goal.path.poses.back().pose.position;
         ac_.sendGoal(goal);
         ROS_INFO("Waiting for result...");
         bool finished_before_timeout = ac_.waitForResult();
         if (finished_before_timeout) {
             actionlib::SimpleClientGoalState state = ac_.getState();
             ROS_INFO("Action finished: %s", state.toString().c_str());
-            p0 = p1;
+            ROS_INFO("Now at %f %f %f", p0.x, p0.y, p0.z);
+            result_.moved = ac_.getResult()->moved;
+            result_.is_reached = success;
         }
         else {
             ROS_INFO("Action did not finish before the time out.");
-            p0 = ac_.getResult()->moved;
+            result_.moved = ac_.getResult()->moved;
+            result_.is_reached = false;
         }
+        if (result_.is_reached) 
+            as_.setSucceeded(result_);
+        else
+            as_.setAborted(result_);
     }
 };
 }

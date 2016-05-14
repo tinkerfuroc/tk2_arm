@@ -24,32 +24,38 @@ BaseAStarPlanner::BaseAStarPlanner() : seq_(0) {
 nav_msgs::Path BaseAStarPlanner::GetPath(
     const geometry_msgs::Point &start_point,
     const geometry_msgs::Point &target_point, bool &success) {
-    success = false;
     vector<vector<vector<bool> > > closed_grids = invalid_map_;
     set<ArmStatePtr, function<bool(const ArmStatePtr &, const ArmStatePtr &)> >
         open_states(bind(&BaseAStarPlanner::CompareState, this, _1, _2));
     GridPoint start_grid = ToGrid(start_point);
     ROS_INFO("Start Grid at %d %d %d", start_grid.x, start_grid.y, start_grid.z);
-    ROS_INFO("Start at %f %f %f", start_point.x, start_point.y, start_point.z);
-    ROS_INFO("Start at %f %f %f", target_point.x, target_point.y, target_point.z);
     target_grid_ = ToGrid(target_point);
     if (target_grid_.z < min_possible_z_)
         target_grid_.z = min_possible_z_;
     if (target_grid_.z > max_possible_z_)
         target_grid_.z = max_possible_z_;
     ROS_INFO("Target Grid at %d %d %d", target_grid_.x, target_grid_.y, target_grid_.z);
-    if (Invalid(start_grid)) {
-        ROS_WARN("BaseAStarPlanner: Start grid not valid");
-        return nav_msgs::Path();
-    }
+    ROS_INFO("Start at %f %f %f", start_point.x, start_point.y, start_point.z);
+    ROS_INFO("Target at %f %f %f", target_point.x, target_point.y, target_point.z);
+    //if (Invalid(start_grid)) {
+    //    ROS_WARN("BaseAStarPlanner: Start grid not valid");
+    //    return nav_msgs::Path();
+    //}
+    success = !Invalid(target_grid_);
     open_states.insert(ArmStatePtr(new ArmState(start_grid, ArmStatePtr())));
+    int steps = 0;
     while (true) {
         if (open_states.empty()) {
             ROS_WARN("BaseAStarPlanner: Failed to make plan");
             return nav_msgs::Path();
         }
         ArmStatePtr now_state = *open_states.begin();
-        if (HasReachedTarget(now_state, target_grid_)) {
+        if (HasReachedTarget(now_state, target_grid_, steps)) {
+            ROS_INFO("Reach Grid at %d %d %d", 
+                    now_state->point.x, now_state->point.y, now_state->point.z);
+            geometry_msgs::Point p = ToPoint(now_state->point);
+            ROS_INFO("Reach Position at %f %f %f", 
+                    p.x, p.y, p.z);
             nav_msgs::Path path;
             path.header.seq = seq_++;
             path.header.frame_id = "arm_origin_link";
@@ -75,16 +81,20 @@ nav_msgs::Path BaseAStarPlanner::GetPath(
         }
         closed_grids[now_state->point.x][now_state->point.y][now_state->point
                                                                  .z] = true;
+        steps++;
     }
 }
 
 bool BaseAStarPlanner::HasReachedTarget(const ArmStatePtr state,
-                                        const GridPoint &target_grid) {
+                                        const GridPoint &target_grid,
+                                        int steps) {
     if (state->point.x == target_grid.x && state->point.y == target_grid.y &&
         state->point.z == target_grid.z) {
         return true;
     }
-    if (state->point.z == target_grid.z) {
+    if (!Invalid(target_grid))
+        return false;
+    if (state->point.z == target_grid.z && steps > 10) {
         int x = state->point.x;
         int y = state->point.y;
         int z = state->point.z;

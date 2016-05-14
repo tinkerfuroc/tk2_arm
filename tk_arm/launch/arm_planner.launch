@@ -3,5 +3,5 @@
         <param name="map_filename" value="$(find tk_arm)/map/arm.map" />
     </node>
     <node name="arm_controller" pkg="tk_arm" type="arm_controller" />
-    <node name="arm_planner" pkg="tk_arm" type="arm_planner.py" output="screen"/>
+    <node name="tinker_arm_move" pkg="tk_arm" type="tinker_arm_move.py" output="screen"/>
 </launch>

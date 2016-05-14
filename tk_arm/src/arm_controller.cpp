@@ -95,6 +95,7 @@ void ArmController::PositionCallback(
         }
     }
     result_.moved = current_end_point_;
+    result_.moved.z += current_height_;
     result_.is_reached = success;
     if (success) {
         as_.setSucceeded(result_);
@@ -150,6 +151,7 @@ void ArmController::PathCallback(
     }
 
     result_path_.moved = current_end_point_;
+    result_path_.moved.z += current_height_;
     result_path_.is_reached = success;
     if (success) {
         as_path_.setSucceeded(result_path_);
