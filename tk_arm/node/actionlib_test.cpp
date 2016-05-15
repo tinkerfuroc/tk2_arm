@@ -8,7 +8,7 @@ int main(int argc, char **argv) {
     ros::init(argc, argv, "test_reach_for_point");
     // clients for GoToPoint and GoToInit action
     actionlib::SimpleActionClient<tk_arm::ArmReachObjectAction> ac(
-        "tinker_arm_move", true);
+        "arm_point", true);
     actionlib::SimpleActionClient<tk_arm::ArmInitAction> ac1("arm_reset", true);
 
     // start the clients

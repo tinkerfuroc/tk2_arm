@@ -46,7 +46,8 @@ public:
         p1.y = 0;
         goal.path = astar_planner.GetPath(p0, p1, success);
         success = success && (!need_y_move);
-        p0 = goal.path.poses.back().pose.position;
+        if (goal.path.poses.size() > 0)
+            p0 = goal.path.poses.back().pose.position;
         ac_.sendGoal(goal);
         ROS_INFO("Waiting for result...");
         bool finished_before_timeout = ac_.waitForResult();

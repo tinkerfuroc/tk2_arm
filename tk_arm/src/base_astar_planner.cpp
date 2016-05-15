@@ -99,6 +99,10 @@ bool BaseAStarPlanner::HasReachedTarget(const ArmStatePtr state,
         int x = state->point.x;
         int y = state->point.y;
         int z = state->point.z;
+        if (start_grid_.x < target_grid_.x && x < start_grid_.x) 
+            return false;
+        if (start_grid_.x > target_grid_.x && x > start_grid_.x) 
+            return false;
         if (invalid_map_[x - 1][y][z] || invalid_map_[x + 1][y][z] ||
             invalid_map_[x][y - 1][z] || invalid_map_[x][y + 1][z]) {
             return true;
