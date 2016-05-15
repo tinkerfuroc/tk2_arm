@@ -61,6 +61,8 @@ class ArmPlanAction:
         goal_point.point.x -= arm_result.moved.x
         goal_point.point.y -= arm_result.moved.y
         goal_point.point.z -= arm_result.moved.z
+        rospy.loginfo('remain %4.2f %4.2f %4.2f', goal_point.point.x,
+                goal_point.point.y, goal_point.point.z)
         # finally move chassis over x and y
         if not arm_result.is_reached:
             rospy.loginfo('chassis move [x,y] = [%4.2f,%4.2f]', 
@@ -70,7 +72,7 @@ class ArmPlanAction:
             goal_point.point.y -= chassis_result.moved_distance.y
             if not chassis_result.success:
                 self._result.is_reached = False
-        if goal_point.point.z != 0:
+        if fabs(goal_point.point.z) > 0.03:
             self._result.is_reached = False
         self._result.moved = arm_result.moved
         if self._result.is_reached:

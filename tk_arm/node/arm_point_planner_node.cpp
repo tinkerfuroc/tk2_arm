@@ -24,7 +24,7 @@ public:
     ArmPointServer():
         nh_(), as_(nh_, "arm_point", boost::bind(&ArmPointServer::PointCallback, this, _1), false),
         ac_("arm_path", true) {
-        p0.x = 0.38;
+        p0.x = 0.41;
         p0.y = 0.;
         p0.z = 0.;
         ROS_INFO("Waiting for action server to start.");

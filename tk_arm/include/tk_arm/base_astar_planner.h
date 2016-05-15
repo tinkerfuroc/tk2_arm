@@ -36,6 +36,7 @@ private:
     double regularity_factor_;
     double z_factor_;
     GridPoint target_grid_;
+    GridPoint start_grid_;
     int seq_;
 };
 }

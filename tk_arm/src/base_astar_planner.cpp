@@ -27,8 +27,8 @@ nav_msgs::Path BaseAStarPlanner::GetPath(
     vector<vector<vector<bool> > > closed_grids = invalid_map_;
     set<ArmStatePtr, function<bool(const ArmStatePtr &, const ArmStatePtr &)> >
         open_states(bind(&BaseAStarPlanner::CompareState, this, _1, _2));
-    GridPoint start_grid = ToGrid(start_point);
-    ROS_INFO("Start Grid at %d %d %d", start_grid.x, start_grid.y, start_grid.z);
+    start_grid_ = ToGrid(start_point);
+    ROS_INFO("Start Grid at %d %d %d", start_grid_.x, start_grid_.y, start_grid_.z);
     target_grid_ = ToGrid(target_point);
     if (target_grid_.z < min_possible_z_)
         target_grid_.z = min_possible_z_;
@@ -37,17 +37,18 @@ nav_msgs::Path BaseAStarPlanner::GetPath(
     ROS_INFO("Target Grid at %d %d %d", target_grid_.x, target_grid_.y, target_grid_.z);
     ROS_INFO("Start at %f %f %f", start_point.x, start_point.y, start_point.z);
     ROS_INFO("Target at %f %f %f", target_point.x, target_point.y, target_point.z);
-    //if (Invalid(start_grid)) {
+    //if (Invalid(start_grid_)) {
     //    ROS_WARN("BaseAStarPlanner: Start grid not valid");
     //    return nav_msgs::Path();
     //}
     success = !Invalid(target_grid_);
-    open_states.insert(ArmStatePtr(new ArmState(start_grid, ArmStatePtr())));
+    open_states.insert(ArmStatePtr(new ArmState(start_grid_, ArmStatePtr())));
     int steps = 0;
+    nav_msgs::Path path;
     while (true) {
         if (open_states.empty()) {
-            ROS_WARN("BaseAStarPlanner: Failed to make plan");
-            return nav_msgs::Path();
+            ROS_INFO("BaseAStarPlanner: Failed to make plan");
+            break;
         }
         ArmStatePtr now_state = *open_states.begin();
         if (HasReachedTarget(now_state, target_grid_, steps)) {
@@ -56,7 +57,6 @@ nav_msgs::Path BaseAStarPlanner::GetPath(
             geometry_msgs::Point p = ToPoint(now_state->point);
             ROS_INFO("Reach Position at %f %f %f", 
                     p.x, p.y, p.z);
-            nav_msgs::Path path;
             path.header.seq = seq_++;
             path.header.frame_id = "arm_origin_link";
             path.header.stamp = ros::Time::now();
@@ -83,6 +83,7 @@ nav_msgs::Path BaseAStarPlanner::GetPath(
                                                                  .z] = true;
         steps++;
     }
+    return path;
 }
 
 bool BaseAStarPlanner::HasReachedTarget(const ArmStatePtr state,
@@ -94,7 +95,7 @@ bool BaseAStarPlanner::HasReachedTarget(const ArmStatePtr state,
     }
     if (!Invalid(target_grid))
         return false;
-    if (state->point.z == target_grid.z && steps > 10) {
+    if (state->point.y == target_grid.y && state->point.z == target_grid.z && steps > 0) {
         int x = state->point.x;
         int y = state->point.y;
         int z = state->point.z;
@@ -113,16 +114,14 @@ std::vector<ArmStatePtr> BaseAStarPlanner::GetNeighbours(
     int z = now_state->point.z;
     vector<ArmStatePtr> neighbours;
     for (int i = -1; i < 2; i++) {
-        for (int j = -1; j < 2; j++) {
-            for (int k = -1; k < 2; k++) {
-                if (i == 0 && j == 0 && k == 0) continue;
-                if (!closed_grids[x + i][y + j][z + k]) {
-                    GridPoint new_grid = {.x = x + i, .y = y + j, .z = z + k};
-                    ArmStatePtr new_state =
-                        ArmStatePtr(new ArmState(new_grid, now_state));
-                    new_state->moved_score = now_state->moved_score + StateIncrementEval(new_state);
-                    neighbours.push_back(new_state);
-                }
+        for (int k = -1; k < 2; k++) {
+            if (i == 0 && k == 0) continue;
+            if (!closed_grids[x + i][y][z + k]) {
+                GridPoint new_grid = {.x = x + i, .y = y, .z = z + k};
+                ArmStatePtr new_state =
+                    ArmStatePtr(new ArmState(new_grid, now_state));
+                new_state->moved_score = now_state->moved_score + StateIncrementEval(new_state);
+                neighbours.push_back(new_state);
             }
         }
     }

@@ -13,7 +13,7 @@ using KDL::Segment;
 using KDL::Frame;
 using KDL::Vector;
 
-const double ArmController::kMoveStep = 0.01;
+const double ArmController::kMoveStep = 0.005;
 const double ArmController::kDegreeInterpolation = (1.0 / 180.0 * M_PI);
 const double ArmController::kShoulderMoveStep = 0.05;
 
@@ -52,7 +52,9 @@ ArmController::ArmController(std::string server_name_)
         initial_joint_angles_(i) = ArmIK::SEG_INIT[i];
     }
 
+    TurnShoulder();
     current_end_point_ = arm_ik_.AngleToPosition(current_joint_angles_);
+    ROS_INFO("current at %f %f %f", current_end_point_.x, current_end_point_.y, current_end_point_.z);
     ROS_INFO("Parameters set.");
 
     // start actionlib servers
@@ -60,7 +62,6 @@ ArmController::ArmController(std::string server_name_)
     as_init_.start();
     as_path_.start();
     ROS_INFO("Arm Server started.");
-    TurnShoulder();
 }
 
 void ArmController::PositionCallback(
@@ -95,7 +96,6 @@ void ArmController::PositionCallback(
         }
     }
     result_.moved = current_end_point_;
-    result_.moved.z += current_height_;
     result_.is_reached = success;
     if (success) {
         as_.setSucceeded(result_);
@@ -151,7 +151,6 @@ void ArmController::PathCallback(
     }
 
     result_path_.moved = current_end_point_;
-    result_path_.moved.z += current_height_;
     result_path_.is_reached = success;
     if (success) {
         as_path_.setSucceeded(result_path_);
@@ -169,6 +168,7 @@ bool ArmController::GoInit() {
     for (int i = 0; i < ArmIK::kNumJoint - 1; i++) {
         target_joint_angles_(i) = ArmIK::SEG_INIT[i];
     }
+    target_joint_angles_(1) = ArmIK::SEG_MIN[1];
     target_end_point_ = arm_ik_.AngleToPosition(target_joint_angles_);
 
     // interpolation in motor angle
@@ -218,11 +218,6 @@ bool ArmController::GoToPosition(bool move) {
     bool is_ok = true;
     std::vector<double> msg;
     msg.resize(ArmIK::kNumJoint);
-    target_height_ =
-        std::max(std::min(object_end_point_.z - ArmIK::kBaseHeightDiff,
-                          ArmIK::kBaseHeightMax),
-                 ArmIK::kBaseHeightMin);
-    MoveBase(move);
     ROS_INFO(
         "Go to position \033[1;34m[%4.2lf %4.2lf %4.2lf]\033[0;0m from \033[1;35m[%4.2lf %4.2lf %4.2lf]\033[0;0m...",
         object_end_point_.x, object_end_point_.y, object_end_point_.z,
@@ -235,7 +230,23 @@ bool ArmController::GoToPosition(bool move) {
         double distance = sqrt(x * x + y * y + z * z);
         target_end_point_.x = current_end_point_.x + x * kMoveStep / distance;
         target_end_point_.y = current_end_point_.y + y * kMoveStep / distance;
-        target_end_point_.z = current_end_point_.z + z * kMoveStep / distance;
+        z = current_end_point_.z + z * kMoveStep / distance;
+        ROS_INFO("z target %f", z);
+        if (z < ArmIK::kBaseHeightMin + ArmIK::kBaseHeightDiff) {
+            z -= ArmIK::kBaseHeightMin;
+            target_height_ = ArmIK::kBaseHeightMin;
+        }
+        else if (z > ArmIK::kBaseHeightMax + ArmIK::kBaseHeightDiff) {
+            z -= ArmIK::kBaseHeightMax;
+            target_height_ = ArmIK::kBaseHeightMax;
+        }
+        else {
+            target_height_ = z - ArmIK::kBaseHeightDiff;
+            z = ArmIK::kBaseHeightDiff;
+        }
+        MoveBase(move);
+        target_end_point_.z = z;
+
         if (!arm_ik_.PositionToAngle(target_end_point_, current_joint_angles_, target_joint_angles_, 10)) {
             ROS_WARN("Position to angle failed.");
             return false;
@@ -246,9 +257,10 @@ bool ArmController::GoToPosition(bool move) {
             MoveArm();
             ros::spinOnce();
             rate_.sleep();
-        } else {
-            current_end_point_ = arm_ik_.AngleToPosition(current_joint_angles_);
-        }
+        }     
+        current_end_point_ = arm_ik_.AngleToPosition(current_joint_angles_);
+        current_end_point_.z += target_height_;
+        ROS_INFO("current at %f %f %f", current_end_point_.x, current_end_point_.y, current_end_point_.z);
     }
     return is_ok;
 }
@@ -266,11 +278,11 @@ void ArmController::TurnShoulder() {
 bool ArmController::MoveBase(bool move) {
     std_msgs::Float64 msg;
     bool direction = target_height_ > current_height_;
-    ROS_INFO("Move base to \033[1;36m%4.2lf\033[0;0m. Current base height: \033[1;35m%4.2lf\033[0;0m. %s.",
-             target_height_, current_height_,
-             direction ? "Moving upwards."
-                       : (target_height_ < current_height_ ? "Moving downwards."
-                                                           : "Not moving."));
+    //ROS_INFO("Move base to \033[1;36m%4.2lf\033[0;0m. Current base height: \033[1;35m%4.2lf\033[0;0m. %s.",
+    //         target_height_, current_height_,
+    //         direction ? "Moving upwards."
+    //                   : (target_height_ < current_height_ ? "Moving downwards."
+    //                                                       : "Not moving."));
 
     if (move) {
         msg.data = target_height_;
@@ -279,20 +291,17 @@ bool ArmController::MoveBase(bool move) {
         current_height_ = target_height_;
         // ROS_INFO("\033[0;35mBase moved to m%4.2lf.", current_height_);
     }
-
-    object_end_point_.z = object_end_point_.z - target_height_;
     // ROS_INFO("Move base succedded.");
     return true;
 }
 
 void ArmController::MoveArm() {
-    ROS_INFO("\033[0;34mPublishing angle: %4.2lf %4.2lf %4.2lf %4.2lf\033[0;0m",
-             current_joint_angles_(0) * 180 / M_PI,
-             (M_PI / 2 - current_joint_angles_(1)) * 180 / M_PI,
-             (current_joint_angles_(2)) * 180 / M_PI,
-             (M_PI / 2 + current_joint_angles_(1) + current_joint_angles_(2)) *
-                 180 / M_PI);
-    current_end_point_ = arm_ik_.AngleToPosition(current_joint_angles_);
+    //ROS_INFO("\033[0;34mPublishing angle: %4.2lf %4.2lf %4.2lf %4.2lf\033[0;0m",
+    //         current_joint_angles_(0) * 180 / M_PI,
+    //         (M_PI / 2 - current_joint_angles_(1)) * 180 / M_PI,
+    //         (current_joint_angles_(2)) * 180 / M_PI,
+    //         (M_PI / 2 + current_joint_angles_(1) + current_joint_angles_(2)) *
+    //             180 / M_PI);
     std_msgs::Float64 msg;
     msg.data = current_joint_angles_(0);
     shoulder_rotation_pub_.publish(msg);
