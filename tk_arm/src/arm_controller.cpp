@@ -54,14 +54,11 @@ ArmController::ArmController(std::string server_name_)
 
     TurnShoulder();
     current_end_point_ = arm_ik_.AngleToPosition(current_joint_angles_);
-    ROS_INFO("current at %f %f %f", current_end_point_.x, current_end_point_.y, current_end_point_.z);
-    ROS_INFO("Parameters set.");
 
     // start actionlib servers
     as_.start();
     as_init_.start();
     as_path_.start();
-    ROS_INFO("Arm Server started.");
 }
 
 void ArmController::PositionCallback(
@@ -83,7 +80,6 @@ void ArmController::PositionCallback(
     bool test_state = new_goal->state & 0x04;
     bool success = true;
 
-    if (test_state) ROS_INFO("\033[0;34mTEST STATE\033[0;0m");
     // ROS_INFO("New Goal! \033[1;34m[%4.2lf %4.2lf %4.2lf]\033[0;0m", object_end_point_.x,
     //          object_end_point_.y, object_end_point_.z);
     if (!HasArrivedObject()) {
@@ -91,7 +87,6 @@ void ArmController::PositionCallback(
          // object_end_point_.y, object_end_point_.z);
         result_.is_reached = GoToPosition(!test_state);
         if (!result_.is_reached) {
-            ROS_INFO("Go to position failed.");
             success = false;
         }
     }
@@ -99,7 +94,7 @@ void ArmController::PositionCallback(
     result_.is_reached = success;
     if (success) {
         as_.setSucceeded(result_);
-        ROS_INFO("\033[1;32mAction Succeded.\033[0;0m");
+        ROS_INFO("\033[1;31mAction Succeeded.\033[0;0m");
     } else {
         as_.setAborted(result_);
         ROS_INFO("\033[1;31mAction Aborted.\033[0;0m");
@@ -108,7 +103,7 @@ void ArmController::PositionCallback(
     if (test_state) {
         current_end_point_ = origin_current_end_point_;
         current_joint_angles_ = origin_current_joint_angles_;
-        ROS_INFO("\033[0;31mTEST STATE ENDS\033[0;0m");
+        //ROS_INFO("\033[0;31mTEST STATE ENDS\033[0;0m");
     }
 }
 
@@ -124,12 +119,18 @@ void ArmController::InitCallback(
 void ArmController::PathCallback(
     const tk_arm::ArmPathGoalConstPtr &new_goal) {
     if (new_goal->path.header.frame_id != "arm_origin_link") {
-        ROS_WARN("Forcing frame id to be arm_origin_link");
+        ROS_WARN("Forcing frame id %s to be arm_origin_link",
+                new_goal->path.header.frame_id.c_str());
     }
 
     bool success = true;
-    for (int i = 0; i < new_goal->path.poses.size(); ++i)
-    {
+    bool cancelled = false;
+    for (int i = 0; i < new_goal->path.poses.size(); ++i) {
+        if (as_path_.isPreemptRequested()) {
+            ROS_INFO("[Arm controller] Cancel requested!");
+            cancelled = true;
+            break;
+        }
         double x = new_goal->path.poses[i].pose.position.x;
         double y = new_goal->path.poses[i].pose.position.y;
         double z = new_goal->path.poses[i].pose.position.z;
@@ -152,7 +153,10 @@ void ArmController::PathCallback(
 
     result_path_.moved = current_end_point_;
     result_path_.is_reached = success;
-    if (success) {
+    if (cancelled) {
+        as_path_.setPreempted(result_path_);
+        ROS_INFO("\033[1;32mAction Cancelled.\033[0;0m");
+    } else if (success) {
         as_path_.setSucceeded(result_path_);
         ROS_INFO("\033[1;32mAction Succeded.\033[0;0m");
     } else {
@@ -218,7 +222,7 @@ bool ArmController::GoToPosition(bool move) {
     bool is_ok = true;
     std::vector<double> msg;
     msg.resize(ArmIK::kNumJoint);
-    ROS_INFO(
+    ROS_DEBUG(
         "Go to position \033[1;34m[%4.2lf %4.2lf %4.2lf]\033[0;0m from \033[1;35m[%4.2lf %4.2lf %4.2lf]\033[0;0m...",
         object_end_point_.x, object_end_point_.y, object_end_point_.z,
         current_end_point_.x, current_end_point_.y, current_end_point_.z);
@@ -231,7 +235,6 @@ bool ArmController::GoToPosition(bool move) {
         target_end_point_.x = current_end_point_.x + x * kMoveStep / distance;
         target_end_point_.y = current_end_point_.y + y * kMoveStep / distance;
         z = current_end_point_.z + z * kMoveStep / distance;
-        ROS_INFO("z target %f", z);
         if (z < ArmIK::kBaseHeightMin + ArmIK::kBaseHeightDiff) {
             z -= ArmIK::kBaseHeightMin;
             target_height_ = ArmIK::kBaseHeightMin;
@@ -260,7 +263,7 @@ bool ArmController::GoToPosition(bool move) {
         }     
         current_end_point_ = arm_ik_.AngleToPosition(current_joint_angles_);
         current_end_point_.z += target_height_;
-        ROS_INFO("current at %f %f %f", current_end_point_.x, current_end_point_.y, current_end_point_.z);
+        ROS_DEBUG("current at %f %f %f", current_end_point_.x, current_end_point_.y, current_end_point_.z);
     }
     return is_ok;
 }
@@ -312,7 +315,11 @@ void ArmController::MoveArm() {
     msg.data = M_PI;
     wrist_deviation_pub_.publish(msg);
     msg.data =
-        M_PI / 2 + current_joint_angles_(1) + current_joint_angles_(2) + 0.12;
+        M_PI / 2 + current_joint_angles_(1) + current_joint_angles_(2) + 0.2;
+    double min_wrist_angle = M_PI + ArmIK::SEG_MIN[3];
+    double max_wrist_angle = M_PI + ArmIK::SEG_MAX[3];
+    msg.data = msg.data < min_wrist_angle ? min_wrist_angle : msg.data;
+    msg.data = msg.data > max_wrist_angle ? max_wrist_angle : msg.data;
     wrist_extension_pub_.publish(msg);
 }
 

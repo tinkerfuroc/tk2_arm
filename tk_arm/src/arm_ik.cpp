@@ -30,7 +30,7 @@ const double ArmIK::SEG_MIN[] = {-94 / 180.0 * M_PI, -4 / 180.0 * M_PI,
 
 const double ArmIK::SEG_MAX[] = {32 / 180.0 * M_PI, 93 / 180.0 * M_PI,
                                  150 / 180.0 * M_PI,
-                                 59 / 180.0 * M_PI};  // max angle pos
+                                 80 / 180.0 * M_PI};  // max angle pos
 
 const double ArmIK::SEG_INIT[] = {-94 / 180.0 * M_PI, 25 / 180.0 * M_PI,
                                   135 / 180.0 * M_PI,

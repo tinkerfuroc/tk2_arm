@@ -17,8 +17,8 @@ namespace arm {
 
 BaseAStarPlanner::BaseAStarPlanner() : seq_(0) {
     private_nh_.param("distance_factor", distance_factor_, 0.7);
-    private_nh_.param("regularity_factor", regularity_factor_, 0.05);
-    private_nh_.param("z_factor", z_factor_, 0.3);
+    private_nh_.param("regularity_factor", regularity_factor_, 0.3);
+    private_nh_.param("z_factor", z_factor_, 0.);
 }
 
 nav_msgs::Path BaseAStarPlanner::GetPath(
@@ -34,13 +34,17 @@ nav_msgs::Path BaseAStarPlanner::GetPath(
         target_grid_.z = min_possible_z_;
     if (target_grid_.z > max_possible_z_)
         target_grid_.z = max_possible_z_;
+    if (target_grid_.x < min_possible_x_)
+        target_grid_.x = min_possible_x_;
+    if (target_grid_.x > max_possible_x_)
+        target_grid_.x = max_possible_x_;
     ROS_INFO("Target Grid at %d %d %d", target_grid_.x, target_grid_.y, target_grid_.z);
     ROS_INFO("Start at %f %f %f", start_point.x, start_point.y, start_point.z);
     ROS_INFO("Target at %f %f %f", target_point.x, target_point.y, target_point.z);
-    //if (Invalid(start_grid_)) {
-    //    ROS_WARN("BaseAStarPlanner: Start grid not valid");
-    //    return nav_msgs::Path();
-    //}
+    if (Invalid(start_grid_)) {
+        ROS_WARN("BaseAStarPlanner: Start grid not valid");
+        //return nav_msgs::Path();
+    }
     success = !Invalid(target_grid_);
     open_states.insert(ArmStatePtr(new ArmState(start_grid_, ArmStatePtr())));
     int steps = 0;

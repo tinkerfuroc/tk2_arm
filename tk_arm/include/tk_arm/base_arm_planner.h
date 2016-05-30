@@ -66,6 +66,8 @@ protected:
     double grid_size_;
     int min_possible_z_;
     int max_possible_z_;
+    int min_possible_x_;
+    int max_possible_x_;
     std::string map_filename_;
     ArmIK arm_ik_;
 

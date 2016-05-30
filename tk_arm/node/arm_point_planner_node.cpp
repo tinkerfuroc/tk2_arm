@@ -5,9 +5,10 @@
 #include <tk_arm/ArmReachObjectAction.h>
 #include <tk_arm/ArmPathAction.h>
 #include <cstdio>
+#include <actionlib_msgs/GoalStatus.h>
 
 using namespace tinker::arm;
-
+using actionlib_msgs::GoalStatus;
 
 namespace tinker{
 namespace arm{
@@ -49,20 +50,22 @@ public:
         if (goal.path.poses.size() > 0)
             p0 = goal.path.poses.back().pose.position;
         ac_.sendGoal(goal);
-        ROS_INFO("Waiting for result...");
-        bool finished_before_timeout = ac_.waitForResult();
-        if (finished_before_timeout) {
-            actionlib::SimpleClientGoalState state = ac_.getState();
-            ROS_INFO("Action finished: %s", state.toString().c_str());
-            ROS_INFO("Now at %f %f %f", p0.x, p0.y, p0.z);
-            result_.moved = ac_.getResult()->moved;
-            result_.is_reached = success;
+        ros::Rate r(20);
+        while(true) {
+            if (ac_.getState().isDone())
+                break;
+            if (as_.isPreemptRequested()) {
+                ac_.cancelAllGoals();
+                as_.setPreempted();
+                return;
+            }
+            r.sleep();
         }
-        else {
-            ROS_INFO("Action did not finish before the time out.");
-            result_.moved = ac_.getResult()->moved;
-            result_.is_reached = false;
-        }
+        actionlib::SimpleClientGoalState state = ac_.getState();
+        ROS_INFO("Action finished: %s", state.toString().c_str());
+        ROS_INFO("Now at %f %f %f", p0.x, p0.y, p0.z);
+        result_.moved = ac_.getResult()->moved;
+        result_.is_reached = success;
         if (result_.is_reached) 
             as_.setSucceeded(result_);
         else

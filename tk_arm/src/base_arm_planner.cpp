@@ -70,6 +70,8 @@ void BaseArmPlanner::BuildValidMap() {
                 if (!invalid_map_[i][j][k]) {
                     max_possible_z_ = k > max_possible_z_ ? k : max_possible_z_;
                     min_possible_z_ = k < min_possible_z_ ? k : min_possible_z_;
+                    max_possible_x_ = i > max_possible_x_ ? i : max_possible_x_;
+                    min_possible_x_ = i < min_possible_x_ ? i : min_possible_x_;
                 }
             }
         }
@@ -157,6 +159,8 @@ bool BaseArmPlanner::LoadValidMap(const string &filename) {
             }
     fread(&min_possible_z_, sizeof(int), 1, fp);
     fread(&max_possible_z_, sizeof(int), 1, fp);
+    fread(&min_possible_x_, sizeof(int), 1, fp);
+    fread(&max_possible_x_, sizeof(int), 1, fp);
     return true;
 }
 
@@ -180,6 +184,8 @@ void BaseArmPlanner::SaveValidMap(const string &filename) {
             }
     fwrite(&min_possible_z_, sizeof(int), 1, fp);
     fwrite(&max_possible_z_, sizeof(int), 1, fp);
+    fwrite(&min_possible_x_, sizeof(int), 1, fp);
+    fwrite(&max_possible_x_, sizeof(int), 1, fp);
     fclose(fp);
 }
 }
