@@ -53,7 +53,6 @@ ArmController::ArmController(std::string server_name_)
     }
 
     TurnShoulder();
-    current_end_point_ = arm_ik_.AngleToPosition(current_joint_angles_);
 
     // start actionlib servers
     as_.start();
@@ -63,6 +62,9 @@ ArmController::ArmController(std::string server_name_)
 
 void ArmController::PositionCallback(
     const tk_arm::ArmReachObjectGoalConstPtr &new_goal) {
+    if (in_init_){ 
+        TurnShoulder();
+    }
     if (new_goal->pos.header.frame_id != "arm_origin_link") {
         ROS_WARN("Forcing frame id to be arm_origin_link");
     }
@@ -118,6 +120,10 @@ void ArmController::InitCallback(
 
 void ArmController::PathCallback(
     const tk_arm::ArmPathGoalConstPtr &new_goal) {
+    if (in_init_){ 
+        TurnShoulder();
+        ROS_WARN("ARM TURN SHOULDER");
+    }
     if (new_goal->path.header.frame_id != "arm_origin_link") {
         ROS_WARN("Forcing frame id %s to be arm_origin_link",
                 new_goal->path.header.frame_id.c_str());
@@ -138,8 +144,8 @@ void ArmController::PathCallback(
         object_end_point_.y = y;
         object_end_point_.z = z;
 
-        // ROS_INFO("New Goal! \033[1;34m[%4.2lf %4.2lf %4.2lf]\033[0;0m", object_end_point_.x,
-             // object_end_point_.y, object_end_point_.z);
+         ROS_INFO("New Goal! \033[1;34m[%4.2lf %4.2lf %4.2lf]\033[0;0m", object_end_point_.x,
+             object_end_point_.y, object_end_point_.z);
         // ROS_INFO("Go to position \033[1;34m[%4.2lf %4.2lf %4.2lf]\033[0;0m", object_end_point_.x,
              // object_end_point_.y, object_end_point_.z);
         if (!HasArrivedObject()) {
@@ -218,7 +224,6 @@ bool ArmController::GoInit() {
 bool ArmController::GoToPosition(bool move) {
     // interpolate on current-to-object direction
 
-    if (in_init_) TurnShoulder();
     bool is_ok = true;
     std::vector<double> msg;
     msg.resize(ArmIK::kNumJoint);
@@ -276,13 +281,14 @@ void ArmController::TurnShoulder() {
         rate_.sleep();
     }
     in_init_ = false;
+    current_end_point_ = arm_ik_.AngleToPosition(current_joint_angles_);
 }
 
 bool ArmController::MoveBase(bool move) {
     std_msgs::Float64 msg;
     bool direction = target_height_ > current_height_;
     //ROS_INFO("Move base to \033[1;36m%4.2lf\033[0;0m. Current base height: \033[1;35m%4.2lf\033[0;0m. %s.",
-    //         target_height_, current_height_,
+    //        target_height_, current_height_,
     //         direction ? "Moving upwards."
     //                   : (target_height_ < current_height_ ? "Moving downwards."
     //                                                       : "Not moving."));
@@ -321,6 +327,7 @@ void ArmController::MoveArm() {
     msg.data = msg.data < min_wrist_angle ? min_wrist_angle : msg.data;
     msg.data = msg.data > max_wrist_angle ? max_wrist_angle : msg.data;
     wrist_extension_pub_.publish(msg);
+    current_end_point_ = arm_ik_.AngleToPosition(current_joint_angles_);
 }
 
 bool ArmController::HasArrivedObject() {
