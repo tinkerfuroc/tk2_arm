@@ -19,13 +19,14 @@ public:
     void PositionCallback(const tk_arm::ArmReachObjectGoalConstPtr &goal);
 
     // callback function for GoInit actionlib server
-    void InitCallback(const tk_arm::ArmInitGoalConstPtr &new_goal);
+    void ModeCallback(const tk_arm::ArmInitGoalConstPtr &new_goal);
     void PathCallback(const tk_arm::ArmPathGoalConstPtr &new_goal);
 
 protected:
     virtual void MoveArm();
     virtual bool GoToPosition(bool move);
-    virtual bool GoInit();
+    virtual bool GoMode(int mode);
+    virtual bool GoToLastPathEnd();
     virtual void TurnShoulder();
     virtual bool MoveBase(bool move);
 
@@ -51,11 +52,15 @@ protected:
     tk_arm::ArmPathResult result_path_;
 
     bool in_init_;
+    bool in_mode_;
+    bool in_kinect_;
 
     // arm states
     KDL::JntArray current_joint_angles_;
     KDL::JntArray target_joint_angles_;
     KDL::JntArray initial_joint_angles_;
+    KDL::JntArray mode_joint_angles_;
+    double mode_height_;
     double current_height_;
     double target_height_;
 
@@ -69,6 +74,7 @@ private:
     static const double kMoveStep;
     static const double kDegreeInterpolation;
     static const double kShoulderMoveStep;
+    static const double kKinectAngle;
 };
 }
 }

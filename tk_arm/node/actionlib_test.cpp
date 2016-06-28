@@ -8,14 +8,16 @@ int main(int argc, char **argv) {
     ros::init(argc, argv, "test_reach_for_point");
     // clients for GoToPoint and GoToInit action
     actionlib::SimpleActionClient<tk_arm::ArmReachObjectAction> ac(
+       //    "arm_reach_position", true);
         "tinker_arm_move", true);
     actionlib::SimpleActionClient<tk_arm::ArmInitAction> ac1("arm_reset", true);
 
     // start the clients
     ROS_INFO("Waiting for action server to start.");
-    ac.waitForServer();
     ac1.waitForServer();
-    ROS_INFO("Action server started.");
+    ROS_INFO("Action client 'arm_reset' link established.");
+    ac.waitForServer();
+    ROS_INFO("Action client 'tinker_arm_move' link established.");
 
     // initialize the goals
     tk_arm::ArmReachObjectGoal goal;
@@ -56,7 +58,8 @@ int main(int argc, char **argv) {
         }
         // client for GoToInit
         else if (a == 1) {
-            goal1.state = 1;
+            printf("mode (0:init, 1:ready, 2:kinect):\n");
+            scanf("%d", &goal1.state);
 
             ROS_INFO("Sending goal...");
             ac1.sendGoal(goal1);

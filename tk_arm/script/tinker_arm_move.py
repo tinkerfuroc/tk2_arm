@@ -27,11 +27,13 @@ class ArmPlanAction:
         self.trans = tf.TransformListener()
         self.chassis_move_client = actionlib.SimpleActionClient('simple_move', SimpleMoveAction)
         self.chassis_move_client.wait_for_server()
+        rospy.loginfo('Action client \'simple_move\' started.')
         self.arm_move_client = actionlib.SimpleActionClient('arm_point', ArmReachObjectAction)
         self.arm_move_client.wait_for_server()
+        rospy.loginfo('Action client \'arm_point\' started.')
         self.cancelled = False
-        rospy.loginfo('Planner start')
         self._as.start()
+        rospy.loginfo('Action server \'tinker_arm_move\' started.')
 
     def execute_cb(self, goal):
         self.cancelled = False

@@ -18,7 +18,7 @@ namespace arm {
 BaseAStarPlanner::BaseAStarPlanner() : seq_(0) {
     private_nh_.param("distance_factor", distance_factor_, 0.7);
     private_nh_.param("regularity_factor", regularity_factor_, 0.3);
-    private_nh_.param("z_factor", z_factor_, 0.05);
+    private_nh_.param("z_factor", z_factor_, 0.);
 }
 
 nav_msgs::Path BaseAStarPlanner::GetPath(

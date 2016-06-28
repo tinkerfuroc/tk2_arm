@@ -13,7 +13,7 @@ namespace arm {
 struct ArmInfo {
     std::vector<double> min_angles;
     std::vector<double> max_angles;
-    std::vector<double> init_angles;
+    std::vector<std::vector<double> > mode_angles;
     std::vector<KDL::Segment> segments;
 };
 
@@ -39,6 +39,7 @@ public:
     bool CheckAngleLegal(const KDL::JntArray &joint_angle);
 
     static const int kNumJoint;
+    static const int kNumMode;
     static const int kNumSegment;
     static const int kErrorRetry;
 
@@ -52,6 +53,8 @@ public:
     static const double SEG_MIN[];
     static const double SEG_MAX[];
     static const double SEG_INIT[];
+    static const double SEG_READY[];
+    static const double SEG_KINECT[];
 
 private:
     void WarnKDLSolve(int retval);
