@@ -13,10 +13,10 @@ using KDL::Segment;
 using KDL::Frame;
 using KDL::Vector;
 
-const double ArmController::kMoveStep = 0.005;
+const double ArmController::kMoveStep = 0.01;
 const double ArmController::kDegreeInterpolation = (2.0 / 180.0 * M_PI);
 const double ArmController::kShoulderMoveStep = 0.05;
-const double ArmController::kKinectAngle = 3.2; 
+const double ArmController::kKinectAngle = 3.4; 
 
 namespace tinker {
 namespace arm {
@@ -254,6 +254,7 @@ bool ArmController::GoMode(int mode) {
             case 0: target_joint_angles_(i) = ArmIK::SEG_INIT[i]; break;
             case 1: target_joint_angles_(i) = ArmIK::SEG_READY[i]; break;
             case 2: target_joint_angles_(i) = ArmIK::SEG_KINECT[i]; break;
+            case 3: target_joint_angles_(i) = ArmIK::SEG_RETRACT[i]; break;
             default: break;
         }        
     }
@@ -291,7 +292,7 @@ bool ArmController::GoMode(int mode) {
     current_joint_angles_(2) = target_joint_angles_(2);
     MoveArm();
     
-    if (mode==2){
+    if (mode!=1){
         std_msgs::Float64 msg;
         msg.data = kKinectAngle;
         wrist_extension_pub_.publish(msg);
@@ -322,7 +323,7 @@ bool ArmController::GoToPosition(bool move) {
         double distance = sqrt(diff_x * diff_x + diff_y * diff_y + diff_z * diff_z);
         target_end_point_.x = current_end_point_.x + diff_x * kMoveStep / distance;
         target_end_point_.y = current_end_point_.y + diff_y * kMoveStep / distance;
-        double target_z = current_end_point_.z + diff_z * kMoveStep / distance;
+        double target_z = current_end_point_.z + diff_z * kMoveStep / distance ;
         if (target_z < ArmIK::kBaseHeightMin + ArmIK::kBaseHeightDiff) {
             target_end_point_.z = target_z - ArmIK::kBaseHeightMin;
             target_height_ = ArmIK::kBaseHeightMin;

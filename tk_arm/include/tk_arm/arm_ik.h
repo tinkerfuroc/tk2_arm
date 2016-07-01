@@ -55,6 +55,7 @@ public:
     static const double SEG_INIT[];
     static const double SEG_READY[];
     static const double SEG_KINECT[];
+    static const double SEG_RETRACT[];
 
 private:
     void WarnKDLSolve(int retval);

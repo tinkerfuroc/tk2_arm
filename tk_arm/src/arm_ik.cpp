@@ -13,7 +13,7 @@ namespace tinker {
 namespace arm {
 
 const int ArmIK::kNumJoint = 4;
-const int ArmIK::kNumMode = 3;
+const int ArmIK::kNumMode = 4;
 const int ArmIK::kNumSegment = 3;
 const int ArmIK::kErrorRetry = 10;
 
@@ -41,8 +41,12 @@ const double ArmIK::SEG_READY[] = {0 / 180.0 * M_PI, 25 / 180.0 * M_PI,
                                   135 / 180.0 * M_PI,
                                   0 / 180.0 * M_PI};  // init angle pos
 
-const double ArmIK::SEG_KINECT[] = {-55 / 180.0 * M_PI, 45 / 180.0 * M_PI,
-                                  145 / 180.0 * M_PI,
+const double ArmIK::SEG_KINECT[] = {-55 / 180.0 * M_PI, 90 / 180.0 * M_PI,
+                                  90 / 180.0 * M_PI,
+                                  50 / 180.0 * M_PI};  // init angle pos
+
+const double ArmIK::SEG_RETRACT[] = {-35 / 180.0 * M_PI, 90 / 180.0 * M_PI,
+                                  90 / 180.0 * M_PI,
                                   50 / 180.0 * M_PI};  // init angle pos
 
 ArmIK::ArmIK() {
@@ -57,6 +61,7 @@ ArmIK::ArmIK() {
         arm_info_.mode_angles[0][i] = SEG_INIT[i];
         arm_info_.mode_angles[1][i] = SEG_READY[i];
         arm_info_.mode_angles[2][i] = SEG_KINECT[i];
+        arm_info_.mode_angles[3][i] = SEG_RETRACT[i];
     }
 
     arm_info_.segments[0] =

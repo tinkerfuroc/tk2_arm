@@ -84,7 +84,7 @@ class ArmPlanAction:
             goal_point.point.y -= chassis_result.moved_distance.y
             if not chassis_result.success:
                 self._result.is_reached = False
-        if fabs(goal_point.point.z) > 0.03:
+        if fabs(goal_point.point.z) > 0.07:
             self._result.is_reached = False
         self._result.moved = arm_result.moved
         if self.cancelled:
