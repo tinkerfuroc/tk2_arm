@@ -13,6 +13,7 @@ namespace tinker {
 namespace arm {
 
 const int ArmIK::kNumJoint = 4;
+const int ArmIK::kNumMode = 4;
 const int ArmIK::kNumSegment = 3;
 const int ArmIK::kErrorRetry = 10;
 
@@ -32,20 +33,35 @@ const double ArmIK::SEG_MAX[] = {32 / 180.0 * M_PI, 93 / 180.0 * M_PI,
                                  150 / 180.0 * M_PI,
                                  80 / 180.0 * M_PI};  // max angle pos
 
-const double ArmIK::SEG_INIT[] = {-94 / 180.0 * M_PI, 25 / 180.0 * M_PI,
+const double ArmIK::SEG_INIT[] = {-94 / 180.0 * M_PI, -3 / 180.0 * M_PI,
                                   135 / 180.0 * M_PI,
                                   0 / 180.0 * M_PI};  // init angle pos
+
+const double ArmIK::SEG_READY[] = {0 / 180.0 * M_PI, 25 / 180.0 * M_PI,
+                                  135 / 180.0 * M_PI,
+                                  0 / 180.0 * M_PI};  // init angle pos
+
+const double ArmIK::SEG_KINECT[] = {-55 / 180.0 * M_PI, 90 / 180.0 * M_PI,
+                                  90 / 180.0 * M_PI,
+                                  50 / 180.0 * M_PI};  // init angle pos
+
+const double ArmIK::SEG_RETRACT[] = {-35 / 180.0 * M_PI, 90 / 180.0 * M_PI,
+                                  90 / 180.0 * M_PI,
+                                  50 / 180.0 * M_PI};  // init angle pos
 
 ArmIK::ArmIK() {
     // load arm parameter into arm_info_
     arm_info_.min_angles.resize(kNumJoint);
     arm_info_.max_angles.resize(kNumJoint);
-    arm_info_.init_angles.resize(kNumJoint);
+    arm_info_.mode_angles.resize(kNumMode, std::vector<double>(kNumJoint, 0));
     arm_info_.segments.resize(kNumSegment);
     for (int i = 0; i < kNumJoint; i++) {
         arm_info_.min_angles[i] = SEG_MIN[i];
         arm_info_.max_angles[i] = SEG_MAX[i];
-        arm_info_.init_angles[i] = SEG_INIT[i];
+        arm_info_.mode_angles[0][i] = SEG_INIT[i];
+        arm_info_.mode_angles[1][i] = SEG_READY[i];
+        arm_info_.mode_angles[2][i] = SEG_KINECT[i];
+        arm_info_.mode_angles[3][i] = SEG_RETRACT[i];
     }
 
     arm_info_.segments[0] =

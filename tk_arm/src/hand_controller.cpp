@@ -17,7 +17,6 @@ HandController::HandController(std::string server_name_)
     hand_pub_ = nh_.advertise<std_msgs::Float64>("/claw_controller/command", 0);
     as_.start();
     ROS_INFO("Hand Server started.");
-    ROS_INFO("Hand Controller Initiated.");
 }
 
 void HandController::HandCallback(const tk_arm::ArmHandGoalConstPtr &new_goal) {

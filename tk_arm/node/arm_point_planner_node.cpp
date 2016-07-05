@@ -28,10 +28,10 @@ public:
         p0.x = 0.41;
         p0.y = 0.;
         p0.z = 0.;
-        ROS_INFO("Waiting for action server to start.");
         as_.start();
+        ROS_INFO("Action server 'arm_point' started.");
         ac_.waitForServer();
-        ROS_INFO("Action server started.");
+        ROS_INFO("Action client 'arm_path' started.");
     }
 
     ~ArmPointServer() {

@@ -27,11 +27,13 @@ class ArmPlanAction:
         self.trans = tf.TransformListener()
         self.chassis_move_client = actionlib.SimpleActionClient('simple_move', SimpleMoveAction)
         self.chassis_move_client.wait_for_server()
+        rospy.loginfo('Action client \'simple_move\' started.')
         self.arm_move_client = actionlib.SimpleActionClient('arm_point', ArmReachObjectAction)
         self.arm_move_client.wait_for_server()
+        rospy.loginfo('Action client \'arm_point\' started.')
         self.cancelled = False
-        rospy.loginfo('Planner start')
         self._as.start()
+        rospy.loginfo('Action server \'tinker_arm_move\' started.')
 
     def execute_cb(self, goal):
         self.cancelled = False
@@ -82,7 +84,7 @@ class ArmPlanAction:
             goal_point.point.y -= chassis_result.moved_distance.y
             if not chassis_result.success:
                 self._result.is_reached = False
-        if fabs(goal_point.point.z) > 0.03:
+        if fabs(goal_point.point.z) > 0.07:
             self._result.is_reached = False
         self._result.moved = arm_result.moved
         if self.cancelled:
