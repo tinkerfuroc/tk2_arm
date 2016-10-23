@@ -1,0 +1,109 @@
+<?xml version="1.0" ?>
+<!--This does not replace URDF, and is not an extension of URDF.
+    This is a format for representing semantic information about the robot structure.
+    A URDF file must exist for this robot as well, where the joints and the links that are referenced are defined
+-->
+<robot name="tinker">
+    <!--GROUPS: Representation of a set of joints and links. This can be useful for specifying DOF to plan for, defining arms, end effectors, etc-->
+    <!--LINKS: When a link is specified, the parent joint of that link (if it exists) is automatically included-->
+    <!--JOINTS: When a joint is specified, the child link of that joint (which will always exist) is automatically included-->
+    <!--CHAINS: When a chain is specified, all the links along the chain (including endpoints) are included in the group. Additionally, all the joints that are parents to included links are also included. This means that joints along the chain and the parent joint of the base link are included in the group-->
+    <!--SUBGROUPS: Groups can also be formed by referencing to already defined group names-->
+    <group name="tinker_move_group">
+        <chain base_link="virtual_x_link" tip_link="wrist_extension_link" />
+    </group>
+    <!--END EFFECTOR: Purpose: Represent information about an end effector.-->
+    <end_effector name="arm_wrist_end" parent_link="wrist_extension_link" group="tinker_move_group" />
+    <!--VIRTUAL JOINT: Purpose: this element defines a virtual joint between a robot link and an external frame of reference (considered fixed with respect to the robot)-->
+    <virtual_joint name="virtual_fixed_odom" type="fixed" parent_frame="/odom" child_link="virtual_x_link" />
+    <!--PASSIVE JOINT: Purpose: this element is used to mark joints that are not actuated-->
+    <passive_joint name="wrist_deviation" />
+    <passive_joint name="shoulder_rotation_joint" />
+    <!--DISABLE COLLISIONS: By default it is assumed that any link of the robot could potentially come into collision with any other link in the robot. This tag disables collision checking between a specified pair of links. -->
+    <disable_collisions link1="arm_base_link" link2="base_laser_link" reason="Never" />
+    <disable_collisions link1="arm_base_link" link2="base_link" reason="Adjacent" />
+    <disable_collisions link1="arm_base_link" link2="elbow_link" reason="Never" />
+    <disable_collisions link1="arm_base_link" link2="kinect_kinect2_ir_link" reason="Never" />
+    <disable_collisions link1="arm_base_link" link2="kinect_kinect2_link" reason="Never" />
+    <disable_collisions link1="arm_base_link" link2="kinect_kinect2_rgb_link" reason="Never" />
+    <disable_collisions link1="arm_base_link" link2="pillar" reason="Never" />
+    <disable_collisions link1="arm_base_link" link2="primesense_front_link" reason="Never" />
+    <disable_collisions link1="arm_base_link" link2="shoulder_base_link" reason="Adjacent" />
+    <disable_collisions link1="arm_base_link" link2="shoulder_link" reason="Default" />
+    <disable_collisions link1="arm_base_link" link2="xtion_back_link" reason="Never" />
+    <disable_collisions link1="base_laser_link" link2="base_link" reason="Adjacent" />
+    <disable_collisions link1="base_laser_link" link2="elbow_link" reason="Never" />
+    <disable_collisions link1="base_laser_link" link2="kinect_kinect2_ir_link" reason="Never" />
+    <disable_collisions link1="base_laser_link" link2="kinect_kinect2_link" reason="Never" />
+    <disable_collisions link1="base_laser_link" link2="kinect_kinect2_rgb_link" reason="Never" />
+    <disable_collisions link1="base_laser_link" link2="pillar" reason="Never" />
+    <disable_collisions link1="base_laser_link" link2="primesense_front_link" reason="Never" />
+    <disable_collisions link1="base_laser_link" link2="shoulder_base_link" reason="Never" />
+    <disable_collisions link1="base_laser_link" link2="shoulder_link" reason="Never" />
+    <disable_collisions link1="base_laser_link" link2="wrist_deviation_link" reason="Never" />
+    <disable_collisions link1="base_laser_link" link2="xtion_back_link" reason="Never" />
+    <disable_collisions link1="base_link" link2="elbow_link" reason="Never" />
+    <disable_collisions link1="base_link" link2="virtual_x_link" reason="Never" />
+    <disable_collisions link1="base_link" link2="virtual_y_link" reason="Never" />
+    <disable_collisions link1="base_link" link2="virtual_yaw_link" reason="Never" />
+    <disable_collisions link1="base_link" link2="kinect_kinect2_ir_link" reason="Never" />
+    <disable_collisions link1="base_link" link2="kinect_kinect2_link" reason="Never" />
+    <disable_collisions link1="base_link" link2="kinect_kinect2_rgb_link" reason="Never" />
+    <disable_collisions link1="base_link" link2="pillar" reason="Adjacent" />
+    <disable_collisions link1="base_link" link2="primesense_front_link" reason="Adjacent" />
+    <disable_collisions link1="base_link" link2="shoulder_base_link" reason="Never" />
+    <disable_collisions link1="base_link" link2="shoulder_link" reason="Never" />
+    <disable_collisions link1="base_link" link2="wrist_deviation_link" reason="Never" />
+    <disable_collisions link1="base_link" link2="wrist_extension_link" reason="Never" />
+    <disable_collisions link1="base_link" link2="xtion_back_link" reason="Adjacent" />
+    <disable_collisions link1="elbow_link" link2="kinect_kinect2_ir_link" reason="Never" />
+    <disable_collisions link1="elbow_link" link2="kinect_kinect2_link" reason="Never" />
+    <disable_collisions link1="elbow_link" link2="kinect_kinect2_rgb_link" reason="Never" />
+    <disable_collisions link1="elbow_link" link2="pillar" reason="Never" />
+    <disable_collisions link1="elbow_link" link2="primesense_front_link" reason="Never" />
+    <disable_collisions link1="elbow_link" link2="shoulder_base_link" reason="Never" />
+    <disable_collisions link1="elbow_link" link2="shoulder_link" reason="Adjacent" />
+    <disable_collisions link1="elbow_link" link2="wrist_deviation_link" reason="Adjacent" />
+    <disable_collisions link1="elbow_link" link2="wrist_extension_link" reason="Never" />
+    <disable_collisions link1="elbow_link" link2="xtion_back_link" reason="Never" />
+    <disable_collisions link1="kinect_kinect2_ir_link" link2="kinect_kinect2_link" reason="Adjacent" />
+    <disable_collisions link1="kinect_kinect2_ir_link" link2="kinect_kinect2_rgb_link" reason="Adjacent" />
+    <disable_collisions link1="kinect_kinect2_ir_link" link2="pillar" reason="Never" />
+    <disable_collisions link1="kinect_kinect2_ir_link" link2="primesense_front_link" reason="Never" />
+    <disable_collisions link1="kinect_kinect2_ir_link" link2="shoulder_base_link" reason="Never" />
+    <disable_collisions link1="kinect_kinect2_ir_link" link2="shoulder_link" reason="Never" />
+    <disable_collisions link1="kinect_kinect2_ir_link" link2="wrist_deviation_link" reason="Never" />
+    <disable_collisions link1="kinect_kinect2_ir_link" link2="wrist_extension_link" reason="Never" />
+    <disable_collisions link1="kinect_kinect2_ir_link" link2="xtion_back_link" reason="Never" />
+    <disable_collisions link1="kinect_kinect2_link" link2="kinect_kinect2_rgb_link" reason="Never" />
+    <disable_collisions link1="kinect_kinect2_link" link2="pillar" reason="Adjacent" />
+    <disable_collisions link1="kinect_kinect2_link" link2="primesense_front_link" reason="Never" />
+    <disable_collisions link1="kinect_kinect2_link" link2="shoulder_base_link" reason="Never" />
+    <disable_collisions link1="kinect_kinect2_link" link2="shoulder_link" reason="Never" />
+    <disable_collisions link1="kinect_kinect2_link" link2="wrist_deviation_link" reason="Never" />
+    <disable_collisions link1="kinect_kinect2_link" link2="wrist_extension_link" reason="Never" />
+    <disable_collisions link1="kinect_kinect2_link" link2="xtion_back_link" reason="Never" />
+    <disable_collisions link1="kinect_kinect2_rgb_link" link2="pillar" reason="Never" />
+    <disable_collisions link1="kinect_kinect2_rgb_link" link2="primesense_front_link" reason="Never" />
+    <disable_collisions link1="kinect_kinect2_rgb_link" link2="shoulder_base_link" reason="Never" />
+    <disable_collisions link1="kinect_kinect2_rgb_link" link2="shoulder_link" reason="Never" />
+    <disable_collisions link1="kinect_kinect2_rgb_link" link2="wrist_deviation_link" reason="Never" />
+    <disable_collisions link1="kinect_kinect2_rgb_link" link2="wrist_extension_link" reason="Never" />
+    <disable_collisions link1="kinect_kinect2_rgb_link" link2="xtion_back_link" reason="Never" />
+    <disable_collisions link1="pillar" link2="primesense_front_link" reason="Never" />
+    <disable_collisions link1="pillar" link2="shoulder_base_link" reason="Never" />
+    <disable_collisions link1="pillar" link2="shoulder_link" reason="Never" />
+    <disable_collisions link1="pillar" link2="wrist_deviation_link" reason="Never" />
+    <disable_collisions link1="pillar" link2="xtion_back_link" reason="Never" />
+    <disable_collisions link1="primesense_front_link" link2="shoulder_base_link" reason="Never" />
+    <disable_collisions link1="primesense_front_link" link2="shoulder_link" reason="Never" />
+    <disable_collisions link1="primesense_front_link" link2="wrist_deviation_link" reason="Never" />
+    <disable_collisions link1="primesense_front_link" link2="wrist_extension_link" reason="Never" />
+    <disable_collisions link1="primesense_front_link" link2="xtion_back_link" reason="Never" />
+    <disable_collisions link1="shoulder_base_link" link2="shoulder_link" reason="Adjacent" />
+    <disable_collisions link1="shoulder_base_link" link2="xtion_back_link" reason="Never" />
+    <disable_collisions link1="shoulder_link" link2="xtion_back_link" reason="Never" />
+    <disable_collisions link1="wrist_deviation_link" link2="wrist_extension_link" reason="Adjacent" />
+    <disable_collisions link1="wrist_deviation_link" link2="xtion_back_link" reason="Never" />
+    <disable_collisions link1="wrist_extension_link" link2="xtion_back_link" reason="Never" />
+</robot>
