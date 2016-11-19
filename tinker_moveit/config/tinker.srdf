@@ -17,7 +17,6 @@
     <!--VIRTUAL JOINT: Purpose: this element defines a virtual joint between a robot link and an external frame of reference (considered fixed with respect to the robot)-->
     <virtual_joint name="virtual_fixed_odom" type="fixed" parent_frame="/odom" child_link="virtual_x_link" />
     <!--PASSIVE JOINT: Purpose: this element is used to mark joints that are not actuated-->
-    <passive_joint name="wrist_deviation" />
     <passive_joint name="shoulder_rotation_joint" />
     <!--DISABLE COLLISIONS: By default it is assumed that any link of the robot could potentially come into collision with any other link in the robot. This tag disables collision checking between a specified pair of links. -->
     <disable_collisions link1="arm_base_link" link2="base_laser_link" reason="Never" />
@@ -40,12 +39,8 @@
     <disable_collisions link1="base_laser_link" link2="primesense_front_link" reason="Never" />
     <disable_collisions link1="base_laser_link" link2="shoulder_base_link" reason="Never" />
     <disable_collisions link1="base_laser_link" link2="shoulder_link" reason="Never" />
-    <disable_collisions link1="base_laser_link" link2="wrist_deviation_link" reason="Never" />
     <disable_collisions link1="base_laser_link" link2="xtion_back_link" reason="Never" />
     <disable_collisions link1="base_link" link2="elbow_link" reason="Never" />
-    <disable_collisions link1="base_link" link2="virtual_x_link" reason="Never" />
-    <disable_collisions link1="base_link" link2="virtual_y_link" reason="Never" />
-    <disable_collisions link1="base_link" link2="virtual_yaw_link" reason="Never" />
     <disable_collisions link1="base_link" link2="kinect_kinect2_ir_link" reason="Never" />
     <disable_collisions link1="base_link" link2="kinect_kinect2_link" reason="Never" />
     <disable_collisions link1="base_link" link2="kinect_kinect2_rgb_link" reason="Never" />
@@ -53,7 +48,6 @@
     <disable_collisions link1="base_link" link2="primesense_front_link" reason="Adjacent" />
     <disable_collisions link1="base_link" link2="shoulder_base_link" reason="Never" />
     <disable_collisions link1="base_link" link2="shoulder_link" reason="Never" />
-    <disable_collisions link1="base_link" link2="wrist_deviation_link" reason="Never" />
     <disable_collisions link1="base_link" link2="wrist_extension_link" reason="Never" />
     <disable_collisions link1="base_link" link2="xtion_back_link" reason="Adjacent" />
     <disable_collisions link1="elbow_link" link2="kinect_kinect2_ir_link" reason="Never" />
@@ -63,8 +57,7 @@
     <disable_collisions link1="elbow_link" link2="primesense_front_link" reason="Never" />
     <disable_collisions link1="elbow_link" link2="shoulder_base_link" reason="Never" />
     <disable_collisions link1="elbow_link" link2="shoulder_link" reason="Adjacent" />
-    <disable_collisions link1="elbow_link" link2="wrist_deviation_link" reason="Adjacent" />
-    <disable_collisions link1="elbow_link" link2="wrist_extension_link" reason="Never" />
+    <disable_collisions link1="elbow_link" link2="wrist_extension_link" reason="Adjacent" />
     <disable_collisions link1="elbow_link" link2="xtion_back_link" reason="Never" />
     <disable_collisions link1="kinect_kinect2_ir_link" link2="kinect_kinect2_link" reason="Adjacent" />
     <disable_collisions link1="kinect_kinect2_ir_link" link2="kinect_kinect2_rgb_link" reason="Adjacent" />
@@ -72,7 +65,6 @@
     <disable_collisions link1="kinect_kinect2_ir_link" link2="primesense_front_link" reason="Never" />
     <disable_collisions link1="kinect_kinect2_ir_link" link2="shoulder_base_link" reason="Never" />
     <disable_collisions link1="kinect_kinect2_ir_link" link2="shoulder_link" reason="Never" />
-    <disable_collisions link1="kinect_kinect2_ir_link" link2="wrist_deviation_link" reason="Never" />
     <disable_collisions link1="kinect_kinect2_ir_link" link2="wrist_extension_link" reason="Never" />
     <disable_collisions link1="kinect_kinect2_ir_link" link2="xtion_back_link" reason="Never" />
     <disable_collisions link1="kinect_kinect2_link" link2="kinect_kinect2_rgb_link" reason="Never" />
@@ -80,30 +72,25 @@
     <disable_collisions link1="kinect_kinect2_link" link2="primesense_front_link" reason="Never" />
     <disable_collisions link1="kinect_kinect2_link" link2="shoulder_base_link" reason="Never" />
     <disable_collisions link1="kinect_kinect2_link" link2="shoulder_link" reason="Never" />
-    <disable_collisions link1="kinect_kinect2_link" link2="wrist_deviation_link" reason="Never" />
     <disable_collisions link1="kinect_kinect2_link" link2="wrist_extension_link" reason="Never" />
     <disable_collisions link1="kinect_kinect2_link" link2="xtion_back_link" reason="Never" />
     <disable_collisions link1="kinect_kinect2_rgb_link" link2="pillar" reason="Never" />
     <disable_collisions link1="kinect_kinect2_rgb_link" link2="primesense_front_link" reason="Never" />
     <disable_collisions link1="kinect_kinect2_rgb_link" link2="shoulder_base_link" reason="Never" />
     <disable_collisions link1="kinect_kinect2_rgb_link" link2="shoulder_link" reason="Never" />
-    <disable_collisions link1="kinect_kinect2_rgb_link" link2="wrist_deviation_link" reason="Never" />
     <disable_collisions link1="kinect_kinect2_rgb_link" link2="wrist_extension_link" reason="Never" />
     <disable_collisions link1="kinect_kinect2_rgb_link" link2="xtion_back_link" reason="Never" />
     <disable_collisions link1="pillar" link2="primesense_front_link" reason="Never" />
     <disable_collisions link1="pillar" link2="shoulder_base_link" reason="Never" />
     <disable_collisions link1="pillar" link2="shoulder_link" reason="Never" />
-    <disable_collisions link1="pillar" link2="wrist_deviation_link" reason="Never" />
+    <disable_collisions link1="pillar" link2="wrist_extension_link" reason="Never" />
     <disable_collisions link1="pillar" link2="xtion_back_link" reason="Never" />
     <disable_collisions link1="primesense_front_link" link2="shoulder_base_link" reason="Never" />
     <disable_collisions link1="primesense_front_link" link2="shoulder_link" reason="Never" />
-    <disable_collisions link1="primesense_front_link" link2="wrist_deviation_link" reason="Never" />
     <disable_collisions link1="primesense_front_link" link2="wrist_extension_link" reason="Never" />
     <disable_collisions link1="primesense_front_link" link2="xtion_back_link" reason="Never" />
     <disable_collisions link1="shoulder_base_link" link2="shoulder_link" reason="Adjacent" />
     <disable_collisions link1="shoulder_base_link" link2="xtion_back_link" reason="Never" />
     <disable_collisions link1="shoulder_link" link2="xtion_back_link" reason="Never" />
-    <disable_collisions link1="wrist_deviation_link" link2="wrist_extension_link" reason="Adjacent" />
-    <disable_collisions link1="wrist_deviation_link" link2="xtion_back_link" reason="Never" />
     <disable_collisions link1="wrist_extension_link" link2="xtion_back_link" reason="Never" />
 </robot>

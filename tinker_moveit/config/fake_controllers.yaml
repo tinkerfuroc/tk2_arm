@@ -5,8 +5,6 @@ controller_list:
       - virtual_y_joint
       - virtual_yaw_joint
       - arm_base_joint
-      - shoulder_rotation_joint
       - shoulder_flexion_joint
       - elbow_joint
-      - wrist_deviation
       - wrist_extension

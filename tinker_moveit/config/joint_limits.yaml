@@ -17,11 +17,6 @@ joint_limits:
     max_velocity: 0.5
     has_acceleration_limits: false
     max_acceleration: 0
-  shoulder_rotation_joint:
-    has_velocity_limits: true
-    max_velocity: 0.5
-    has_acceleration_limits: false
-    max_acceleration: 0
   virtual_x_joint:
     has_velocity_limits: true
     max_velocity: 0.2
@@ -35,11 +30,6 @@ joint_limits:
   virtual_yaw_joint:
     has_velocity_limits: true
     max_velocity: 0.2
-    has_acceleration_limits: false
-    max_acceleration: 0
-  wrist_deviation:
-    has_velocity_limits: true
-    max_velocity: 0.5
     has_acceleration_limits: false
     max_acceleration: 0
   wrist_extension:

@@ -5,4 +5,4 @@ moveit_setup_assistant_config:
   SRDF:
     relative_path: config/tinker.srdf
   CONFIG:
-    generated_timestamp: 1477231816
+    generated_timestamp: 1477393374
